@@ -7,6 +7,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,16 +32,21 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
             throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                // Tắt CSRF vì chúng ta dùng JWT, không dựa trên session/cookie
+                .csrf(AbstractHttpConfigurer::disable)
+
+                // Cấu hình quy tắc cho các request HTTP
+                .authorizeHttpRequests(authorize -> authorize
+                        // Cho phép các endpoint này được truy cập công khai
+                        .requestMatchers("/api/auth/**", "/ws/**").permitAll()
+                        // Yêu cầu tất cả các request còn lại phải được xác thực
+                        .anyRequest().authenticated())
+
+                // Cấu hình quản lý session: không tạo session vì dùng JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .anyRequest().authenticated());
 
-        // Spring sẽ tự động sử dụng các provider đã được định nghĩa là Bean
-        // nên không cần đăng ký thủ công với .authenticationProvider() nữa
-
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // Thêm bộ lọc JWT vào trước bộ lọc UsernamePasswordAuthenticationFilter
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

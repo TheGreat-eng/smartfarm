@@ -33,4 +33,25 @@ public class FarmService {
 
         return farmRepository.save(farm);
     }
+
+    // ... existing methods ...
+    public Farm updateFarm(Long farmId, FarmRequest farmRequest, Long userId) {
+        Farm farm = farmRepository.findById(farmId)
+                .orElseThrow(() -> new RuntimeException("Farm not found"));
+        if (!farm.getUser().getId().equals(userId)) {
+            throw new SecurityException("User not authorized to update this farm");
+        }
+        farm.setName(farmRequest.getName());
+        farm.setLocation(farmRequest.getLocation());
+        return farmRepository.save(farm);
+    }
+
+    public void deleteFarm(Long farmId, Long userId) {
+        Farm farm = farmRepository.findById(farmId)
+                .orElseThrow(() -> new RuntimeException("Farm not found"));
+        if (!farm.getUser().getId().equals(userId)) {
+            throw new SecurityException("User not authorized to delete this farm");
+        }
+        farmRepository.delete(farm);
+    }
 }
