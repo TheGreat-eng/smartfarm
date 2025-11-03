@@ -13,11 +13,13 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.Customizer; // 1. THÊM IMPORT NÀY
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    // ... (các bean khác không đổi) ...
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
@@ -32,20 +34,21 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
             throws Exception {
         http
-                // Tắt CSRF vì chúng ta dùng JWT, không dựa trên session/cookie
+                // 2. THÊM DÒNG NÀY VÀO ĐẦU TIÊN
+                .cors(Customizer.withDefaults())
+
+                // Tắt CSRF vì chúng ta dùng JWT
                 .csrf(AbstractHttpConfigurer::disable)
 
                 // Cấu hình quy tắc cho các request HTTP
                 .authorizeHttpRequests(authorize -> authorize
-                        // Cho phép các endpoint này được truy cập công khai
                         .requestMatchers("/api/auth/**", "/ws/**").permitAll()
-                        // Yêu cầu tất cả các request còn lại phải được xác thực
                         .anyRequest().authenticated())
 
-                // Cấu hình quản lý session: không tạo session vì dùng JWT
+                // Cấu hình quản lý session
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Thêm bộ lọc JWT vào trước bộ lọc UsernamePasswordAuthenticationFilter
+                // Thêm bộ lọc JWT
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

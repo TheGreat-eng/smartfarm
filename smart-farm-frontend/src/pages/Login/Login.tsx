@@ -13,7 +13,7 @@ const LoginPage: React.FC = () => {
         try {
             // Gửi request đăng nhập tới backend
             const response = await apiClient.post('/auth/login', {
-                email: values.username,
+                username: values.username, // <-- Đúng field backend yêu cầu
                 password: values.password,
             });
 

@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/pro-layout": "^7.22.7",
     "antd": "^5.27.5",
     "axios": "^1.12.2",
+    "lucide-react": "^0.552.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "react-router-dom": "^7.9.4",

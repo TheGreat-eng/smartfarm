@@ -22,38 +22,38 @@ public class MqttMessageHandler {
     @Autowired
     private ObjectMapper objectMapper;
 
+    // Lắng nghe tất cả các topic con bên trong smartfarm/data/
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public void handleMessage(String payload, @Header(MqttHeaders.RECEIVED_TOPIC) String topic) {
         log.info("Received MQTT message on topic [{}]: {}", topic, payload);
         try {
-            // Topic format: smartfarm/data/{farmId}/{sensorId}/{metricType}
+            // Cấu trúc topic: smartfarm/data/{farmId}/{sensorId}/{metricType}
             String[] topicParts = topic.split("/");
-            if (topicParts.length != 5) {
+            if (topicParts.length != 5 || !topicParts[0].equals("smartfarm") || !topicParts[1].equals("data")) {
                 log.warn("Invalid topic format: {}", topic);
                 return;
             }
             String farmId = topicParts[2];
-            String sensorId = topicParts[3];
+            String sensorIdentifier = topicParts[3]; // Đổi tên để khớp với model
             String metricType = topicParts[4];
 
-            // Assuming payload is a simple value or a JSON like {"value": 25.5}
-            double value;
-            try {
-                JsonNode rootNode = objectMapper.readTree(payload);
-                value = rootNode.get("value").asDouble();
-            } catch (Exception e) {
-                value = Double.parseDouble(payload);
+            // Xử lý payload JSON: {"value": 25.5}
+            JsonNode rootNode = objectMapper.readTree(payload);
+            if (!rootNode.has("value")) {
+                log.warn("Payload does not contain 'value' field: {}", payload);
+                return;
             }
+            double value = rootNode.get("value").asDouble();
 
             SensorData data = new SensorData();
             data.setFarmId(farmId);
-            data.setSensorId(sensorId);
+            data.setSensorId(sensorIdentifier); // Sử dụng deviceIdentifier của cảm biến
             data.setMetricType(metricType);
             data.setValue(value);
             data.setTime(Instant.now());
 
             sensorDataRepository.save(data);
-            log.info("Saved sensor data: {}", data);
+            log.info("Successfully saved sensor data: {}", data);
 
         } catch (Exception e) {
             log.error("Error processing MQTT message: {}", payload, e);

@@ -5,6 +5,11 @@ import com.example.smartfarm.model.Device;
 import com.example.smartfarm.model.Farm;
 import com.example.smartfarm.repository.DeviceRepository;
 import com.example.smartfarm.repository.FarmRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +20,12 @@ public class DeviceService {
     private DeviceRepository deviceRepository;
     @Autowired
     private FarmRepository farmRepository;
+
+    @Autowired
+    private MqttGateway mqttGateway; // Tiêm MqttGateway
+
+    @Autowired
+    private ObjectMapper objectMapper; // Dùng để chuyển Map thành JSON string
 
     public Device createDevice(Long farmId, DeviceRequest deviceRequest, Long userId) {
         // Tìm nông trại
@@ -40,5 +51,30 @@ public class DeviceService {
         device.setFarm(farm);
 
         return deviceRepository.save(device);
+    }
+
+    // Hàm mới để gửi lệnh
+    public void sendCommand(Long deviceId, String command, Long userId) {
+        // 1. Lấy thông tin thiết bị từ DB
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new RuntimeException("Device not found with id: " + deviceId));
+
+        // 2. Kiểm tra quyền sở hữu (quan trọng)
+        if (!device.getFarm().getUser().getId().equals(userId)) {
+            throw new SecurityException("User does not have permission to control this device");
+        }
+
+        // 3. Xây dựng topic và payload
+        String topic = "smartfarm/control/" + device.getDeviceIdentifier();
+        String payloadJson;
+        try {
+            payloadJson = objectMapper.writeValueAsString(Map.of("command", command.toUpperCase()));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error creating JSON payload", e);
+        }
+
+        // 4. Gửi lệnh qua MQTT Gateway
+        mqttGateway.sendToMqtt(payloadJson, topic);
+        System.out.println("Sent command '" + payloadJson + "' to topic '" + topic + "'");
     }
 }
