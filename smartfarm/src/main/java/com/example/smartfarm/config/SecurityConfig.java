@@ -43,6 +43,9 @@ public class SecurityConfig {
                 // Cấu hình quy tắc cho các request HTTP
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/**", "/ws/**").permitAll()
+                        .requestMatchers("GET", "/api/farms/**").authenticated() // ✅ Thêm dòng này
+                        .requestMatchers("POST", "/api/farms/*/rules").authenticated() // ✅ Allow POST rules
+                        .requestMatchers("DELETE", "/api/farms/*/rules/**").authenticated() // ✅ Allow DELETE rules
                         .anyRequest().authenticated())
 
                 // Cấu hình quản lý session

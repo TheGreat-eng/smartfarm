@@ -10,7 +10,8 @@ import com.example.smartfarm.dto.LoginRequest;
 import com.example.smartfarm.dto.RegisterRequest;
 import com.example.smartfarm.service.AuthService;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+// ❌ XÓA @CrossOrigin này vì đã có WebConfig
+// @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
