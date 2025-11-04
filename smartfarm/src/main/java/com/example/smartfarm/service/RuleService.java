@@ -7,6 +7,9 @@ import com.example.smartfarm.model.Rule;
 import com.example.smartfarm.repository.DeviceRepository;
 import com.example.smartfarm.repository.FarmRepository;
 import com.example.smartfarm.repository.RuleRepository;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,5 +59,15 @@ public class RuleService {
         rule.setFarm(farm);
 
         return ruleRepository.save(rule);
+    }
+
+    public List<Rule> getRulesByFarm(Long farmId, Long userId) {
+        Farm farm = farmRepository.findById(farmId)
+                .orElseThrow(() -> new RuntimeException("Farm not found with id: " + farmId));
+
+        if (!farm.getUser().getId().equals(userId)) {
+            throw new SecurityException("User does not have permission to view rules for this farm");
+        }
+        return ruleRepository.findAllByFarmId(farmId);
     }
 }

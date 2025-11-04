@@ -7,7 +7,9 @@ import com.example.smartfarm.repository.DeviceRepository;
 import com.example.smartfarm.repository.FarmRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.transaction.annotation.Transactional; // 1. THÊM IMPORT NÀY
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,7 @@ public class DeviceService {
     @Autowired
     private ObjectMapper objectMapper; // Dùng để chuyển Map thành JSON string
 
+    @Transactional
     public Device createDevice(Long farmId, DeviceRequest deviceRequest, Long userId) {
         // Tìm nông trại
         Farm farm = farmRepository.findById(farmId)
@@ -54,6 +57,7 @@ public class DeviceService {
     }
 
     // Hàm mới để gửi lệnh
+    @Transactional
     public void sendCommand(Long deviceId, String command, Long userId) {
         // 1. Lấy thông tin thiết bị từ DB
         Device device = deviceRepository.findById(deviceId)
@@ -76,5 +80,16 @@ public class DeviceService {
         // 4. Gửi lệnh qua MQTT Gateway
         mqttGateway.sendToMqtt(payloadJson, topic);
         System.out.println("Sent command '" + payloadJson + "' to topic '" + topic + "'");
+    }
+
+    public List<Device> getDevicesByFarm(Long farmId, Long userId) {
+        Farm farm = farmRepository.findById(farmId)
+                .orElseThrow(() -> new RuntimeException("Farm not found with id: " + farmId));
+
+        if (!farm.getUser().getId().equals(userId)) {
+            throw new SecurityException("User does not have permission to view devices on this farm");
+        }
+
+        return deviceRepository.findAllByFarmId(farmId);
     }
 }

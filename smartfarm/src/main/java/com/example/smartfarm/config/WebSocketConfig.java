@@ -21,10 +21,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
-                // Thêm dòng này để sử dụng HandshakeHandler tùy chỉnh
-                .setHandshakeHandler(new CustomHandshakeHandler());
-        // Bạn có thể tạm thời bỏ SockJS nếu vẫn đang debug
-        // .withSockJS();
+                .setAllowedOrigins("http://localhost:3000") // Chỉ định rõ origin của frontend
+                .setHandshakeHandler(new CustomHandshakeHandler())
+                .withSockJS(); // Bật lại SockJS để tăng tính tương thích
     }
 }

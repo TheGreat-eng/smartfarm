@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
+import org.springframework.util.AntPathMatcher; // 1. THÊM IMPORT NÀY
 
 @Component
 
@@ -64,6 +65,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+
+    // 2. THÊM PHƯƠNG THỨC NÀY VÀO
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        // Bỏ qua không lọc các request đến endpoint của WebSocket
+        return new AntPathMatcher().match("/ws/**", request.getServletPath());
     }
 
 }

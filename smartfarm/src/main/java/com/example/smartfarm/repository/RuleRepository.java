@@ -9,4 +9,6 @@ import com.example.smartfarm.model.Rule;
 public interface RuleRepository extends JpaRepository<Rule, Long> {
 
     List<Rule> findByEnabled(boolean enabled);
+
+    List<Rule> findAllByFarmId(Long farmId); // Thêm dòng này
 }

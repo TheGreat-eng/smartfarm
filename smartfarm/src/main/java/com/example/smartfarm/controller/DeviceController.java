@@ -12,6 +12,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import com.example.smartfarm.service.MqttGateway; // 1. Import MqttGateway
 import java.util.Map; // 2. Import Map
+import org.springframework.dao.DataIntegrityViolationException; // 1. THÊM IMPORT NÀY
+
+import java.util.List; // Thêm import
+import java.util.stream.Collectors; // Thêm import
 
 @RestController
 @RequestMapping("/api/farms/{farmId}/devices")
@@ -28,11 +32,13 @@ public class DeviceController {
         try {
             Device newDevice = deviceService.createDevice(farmId, deviceRequest, userDetails.getId());
             return ResponseEntity.ok(new DeviceResponse(newDevice));
+        } catch (DataIntegrityViolationException e) { // 2. THÊM KHỐI CATCH NÀY
+            // Trả về 409 Conflict khi có lỗi ràng buộc duy nhất (unique constraint)
+            return ResponseEntity.status(409)
+                    .body("Device identifier '" + deviceRequest.getDeviceIdentifier() + "' already exists.");
         } catch (SecurityException e) {
-            // Trả về 403 khi người dùng không có quyền
             return ResponseEntity.status(403).body(e.getMessage());
         } catch (RuntimeException e) {
-            // Trả về 400 cho các lỗi khác (farm not found, identifier exists)
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -59,4 +65,22 @@ public class DeviceController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @GetMapping
+    public ResponseEntity<?> getDevicesByFarm(
+            @PathVariable Long farmId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        try {
+            List<DeviceResponse> devices = deviceService.getDevicesByFarm(farmId, userDetails.getId())
+                    .stream()
+                    .map(DeviceResponse::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(devices);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }

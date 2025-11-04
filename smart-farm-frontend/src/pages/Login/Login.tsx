@@ -3,6 +3,8 @@ import { Form, Input, Button, Card, Flex, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/api'; // Sẽ tạo ở bước 3
+import { Link } from 'react-router-dom'; // Thêm Link
+
 
 const { Title } = Typography;
 
@@ -65,6 +67,10 @@ const LoginPage: React.FC = () => {
                         <Button type="primary" htmlType="submit" block>
                             Đăng nhập
                         </Button>
+                        {/* THÊM DÒNG NÀY */}
+                        <div style={{ marginTop: '10px', textAlign: 'center' }}>
+                            Chưa có tài khoản? <Link to="/register">Đăng ký ngay!</Link>
+                        </div>
                     </Form.Item>
                 </Form>
             </Card>
