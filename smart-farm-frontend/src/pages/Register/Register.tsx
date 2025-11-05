@@ -9,6 +9,7 @@ const { Title } = Typography;
 const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
 
+    // Xử lý khi người dùng submit form đăng ký
     const onFinish = async (values: any) => {
         if (values.password !== values.confirmPassword) {
             message.error('Mật khẩu xác nhận không khớp!');

@@ -71,7 +71,6 @@ const FarmListPage: React.FC = () => {
             message.error('Thêm nông trại thất bại!');
         }
     };
-    // ---- KẾT THÚC CHỨC NĂNG THÊM MỚI ----
 
 
     // ... (Phần render khi loading không đổi) ...

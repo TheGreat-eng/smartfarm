@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// Tạo instance của axios với cấu hình cơ bản
 const apiClient = axios.create({
     baseURL: 'http://localhost:8080/api/',
     headers: {
@@ -19,6 +20,7 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// Interceptor để xử lý lỗi 401 Unauthorized
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
