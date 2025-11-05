@@ -12,9 +12,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // Defines prefixes for topics that clients subscribe to
+        // định nghĩa tiền tố cho các topics mà khách hàng đăng ký
         config.enableSimpleBroker("/topic");
-        // Defines the prefix for messages bound for @MessageMapping-annotated methods
+        // định nghĩa tiền tố cho các message được gửi đến các phương thức
+        // @MessageMapping
         config.setApplicationDestinationPrefixes("/app");
     }
 

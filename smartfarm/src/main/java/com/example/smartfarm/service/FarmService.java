@@ -34,7 +34,6 @@ public class FarmService {
         return farmRepository.save(farm);
     }
 
-    // ... existing methods ...
     public Farm updateFarm(Long farmId, FarmRequest farmRequest, Long userId) {
         Farm farm = farmRepository.findById(farmId)
                 .orElseThrow(() -> new RuntimeException("Farm not found"));

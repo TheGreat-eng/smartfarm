@@ -7,7 +7,7 @@ import com.example.smartfarm.repository.DeviceRepository;
 import com.example.smartfarm.repository.FarmRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.transaction.annotation.Transactional; // 1. THÊM IMPORT NÀY
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;

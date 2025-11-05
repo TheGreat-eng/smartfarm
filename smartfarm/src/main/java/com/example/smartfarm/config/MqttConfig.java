@@ -18,6 +18,7 @@ import org.springframework.messaging.MessageHandler;
 @Configuration
 public class MqttConfig {
 
+    // Đọc các giá trị cấu hình từ application.properties
     @Value("${mqtt.broker.url}")
     private String brokerUrl;
     @Value("${mqtt.client.id}")
@@ -25,6 +26,7 @@ public class MqttConfig {
     @Value("${mqtt.topic.data}")
     private String dataTopic;
 
+    // Tạo MqttClientFactory — cấu hình kết nối đến broker MQTT
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
@@ -37,12 +39,13 @@ public class MqttConfig {
         return factory;
     }
 
-    // --- Inbound (Nhận dữ liệu từ cảm biến) ---
+    // Tạo kênh inbound channel — nơi nhận message từ MQTT broker
     @Bean
     public MessageChannel mqttInputChannel() {
         return new DirectChannel();
     }
 
+    // Adapter inbound — lắng nghe topic cảm biến và đẩy dữ liệu vào hệ thống
     @Bean
     public MessageProducer inbound() {
         MqttPahoMessageDrivenChannelAdapter adapter = new MqttPahoMessageDrivenChannelAdapter(
@@ -60,13 +63,13 @@ public class MqttConfig {
         return new DirectChannel();
     }
 
+    // MessageHandler outbound — xử lý việc gửi message lên MQTT broker.
     @Bean
     @ServiceActivator(inputChannel = "mqttOutboundChannel")
-    public MessageHandler mqttOutbound() { // Bỏ name đi cho gọn
+    public MessageHandler mqttOutbound() {
         MqttPahoMessageHandler messageHandler = new MqttPahoMessageHandler(
                 clientId + "_outbound", mqttClientFactory());
         messageHandler.setAsync(true);
-        // Topic mặc định này sẽ bị ghi đè bởi Gateway, nhưng vẫn nên có
         messageHandler.setDefaultTopic("smartfarm/control/default");
         return messageHandler;
     }

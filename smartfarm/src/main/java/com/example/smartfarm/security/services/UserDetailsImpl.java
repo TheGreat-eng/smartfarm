@@ -36,7 +36,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // Không dùng role trong ví dụ này
+        return Collections.emptyList(); // Không dùng role
     }
 
     @Override

@@ -29,6 +29,7 @@ public class AuthService {
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    // ĐĂNG KÝ NGƯỜI DÙNG MỚI
     public User registerUser(RegisterRequest registerRequest) {
         if (userRepository.existsByUsername(registerRequest.getUsername())) {
             throw new RuntimeException("Error: Username is already taken!");
@@ -45,6 +46,7 @@ public class AuthService {
         return userRepository.save(user);
     }
 
+    // ĐĂNG NHẬP NGƯỜI DÙNG
     public String authenticateUser(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));

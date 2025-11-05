@@ -98,7 +98,7 @@ const FarmDetailPage: React.FC = () => {
         ]);
         setLoading(prev => ({ ...prev, rules: false }));
 
-        /*
+
         // TODO: BỎ COMMENT KHI CÓ API
         // Lấy danh sách thiết bị
         try {
@@ -119,7 +119,7 @@ const FarmDetailPage: React.FC = () => {
         } finally {
             setLoading(prev => ({ ...prev, rules: false }));
         }
-        */
+
 
     }, [farmId]);
 
@@ -276,7 +276,7 @@ const FarmDetailPage: React.FC = () => {
 
                         <Divider />
 
-                        {/* Phần quản lý thiết bị và luật */}
+                        {/* Phần quản lý thiết bị và quy tắc */}
                         <Row gutter={[24, 24]}>
                             <Col xs={24} md={12}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -295,8 +295,8 @@ const FarmDetailPage: React.FC = () => {
                             </Col>
                             <Col xs={24} md={12}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Title level={4}>Luật tự động</Title>
-                                    <Button icon={<PlusOutlined />} onClick={() => setIsRuleModalVisible(true)}>Thêm luật</Button>
+                                    <Title level={4}>Quy tắc tự động</Title>
+                                    <Button icon={<PlusOutlined />} onClick={() => setIsRuleModalVisible(true)}>Thêm quy tắc</Button>
                                 </div>
                                 <List
                                     dataSource={rules}

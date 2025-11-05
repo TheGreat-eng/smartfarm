@@ -27,7 +27,6 @@ public class InfluxDBConfig {
      * Spring sẽ gọi phương thức này để tạo một đối tượng InfluxDBClient duy nhất
      * và quản lý vòng đời của nó.
      *
-     * @return một instance của InfluxDBClient đã được cấu hình.
      */
     @Bean
     public InfluxDBClient influxDBClient() {

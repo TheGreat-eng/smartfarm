@@ -10,20 +10,20 @@ import com.example.smartfarm.dto.LoginRequest;
 import com.example.smartfarm.dto.RegisterRequest;
 import com.example.smartfarm.service.AuthService;
 
-// ❌ XÓA @CrossOrigin này vì đã có WebConfig
-// @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
     @Autowired
     private AuthService authService;
 
+    // ĐĂNG NHẬP
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         String jwt = authService.authenticateUser(loginRequest);
         return ResponseEntity.ok(new AuthResponse(jwt));
     }
 
+    // ĐĂNG KÝ
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
         try {

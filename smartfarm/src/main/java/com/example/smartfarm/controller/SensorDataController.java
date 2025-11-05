@@ -17,6 +17,7 @@ public class SensorDataController {
     @Autowired
     private SensorDataService sensorDataService;
 
+    // LẤY DỮ LIỆU CẢM BIẾN MỚI NHẤT
     @GetMapping("/latest")
     public ResponseEntity<?> getLatestSensorData(
             @PathVariable Long farmId,

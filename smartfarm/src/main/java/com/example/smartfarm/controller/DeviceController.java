@@ -10,12 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import com.example.smartfarm.service.MqttGateway; // 1. Import MqttGateway
-import java.util.Map; // 2. Import Map
-import org.springframework.dao.DataIntegrityViolationException; // 1. THÊM IMPORT NÀY
+import com.example.smartfarm.service.MqttGateway;
+import java.util.Map;
+import org.springframework.dao.DataIntegrityViolationException;
 
-import java.util.List; // Thêm import
-import java.util.stream.Collectors; // Thêm import
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/farms/{farmId}/devices")
@@ -24,6 +24,7 @@ public class DeviceController {
     @Autowired
     private DeviceService deviceService;
 
+    // TẠO THIẾT BỊ MỚI
     @PostMapping
     public ResponseEntity<?> createDevice(
             @PathVariable Long farmId,
@@ -66,6 +67,7 @@ public class DeviceController {
         }
     }
 
+    // LẤY DANH SÁCH THIẾT BỊ THEO NÔNG TRẠI
     @GetMapping
     public ResponseEntity<?> getDevicesByFarm(
             @PathVariable Long farmId,

@@ -19,6 +19,7 @@ public class FarmController {
     @Autowired
     private FarmService farmService;
 
+    // LẤY DANH SÁCH NÔNG TRẠI CỦA NGƯỜI DÙNG
     @GetMapping
     public ResponseEntity<List<FarmResponse>> getUserFarms(@AuthenticationPrincipal UserDetailsImpl userDetails) {
         List<FarmResponse> farms = farmService.getFarmsByUserId(userDetails.getId())
@@ -28,6 +29,7 @@ public class FarmController {
         return ResponseEntity.ok(farms);
     }
 
+    // TẠO NÔNG TRẠI MỚI
     @PostMapping
     public ResponseEntity<FarmResponse> createFarm(@Valid @RequestBody FarmRequest farmRequest,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {

@@ -31,6 +31,7 @@ public class RuleExecutionScheduler {
     @Autowired
     private NotificationService notificationService;
 
+    // THỰC THI CÁC QUY TẮC
     @Scheduled(fixedRate = 30000) // Run every 30 seconds
     @Transactional // Thêm annotation này
     public void executeRules() {
@@ -53,8 +54,8 @@ public class RuleExecutionScheduler {
         }
     }
 
+    // ĐÁNH GIÁ ĐIỀU KIỆN CỦA QUY TẮC
     private boolean evaluateCondition(double currentValue, String operator, double ruleValue) {
-        // ... (giữ nguyên)
         switch (operator) {
             case "<":
                 return currentValue < ruleValue;
@@ -71,6 +72,7 @@ public class RuleExecutionScheduler {
         }
     }
 
+    // KÍCH HOẠT HÀNH ĐỘNG CỦA QUY TẮC
     private void triggerAction(Rule rule) {
         String actuatorId = rule.getActuatorDevice().getDeviceIdentifier();
         String command = rule.getActionType(); // e.g., "TURN_ON"

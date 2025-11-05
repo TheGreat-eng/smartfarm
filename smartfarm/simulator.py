@@ -20,7 +20,7 @@ DEVICES = [
     {"identifier": "sensor-light-01", "type": "SENSOR_LIGHT", "value": 30000.0}
 ]
 
-# --- SIMULATION LOGIC (Không thay đổi) ---
+# --- SIMULATION LOGIC  ---
 
 def simulate_sensor_value(device):
     """Giả lập giá trị mới cho cảm biến dựa trên loại và thời gian trong ngày."""
@@ -56,14 +56,14 @@ def simulate_sensor_value(device):
 def on_connect(client, userdata, flags, reason_code, properties):
     """Callback được gọi khi kết nối thành công."""
     if reason_code == 0:
-        print("✅ Connected to MQTT Broker successfully!")
-        # ✅ SỬA ĐỔI: Subscribe vào topic điều khiển ngay khi kết nối
-        # Dấu '#' là wildcard, sẽ nhận lệnh cho TẤT CẢ các thiết bị
+        print(" Connected to MQTT Broker successfully!")
+        #  SỬA ĐỔI: Subscribe vào topic điều khiển ngay khi kết nối
+        # Dấu '#' sẽ nhận lệnh cho TẤT CẢ các thiết bị
         control_topic = "smartfarm/control/#"
         client.subscribe(control_topic) 
         print(f"  -> Subscribed to `{control_topic}` to listen for commands.")
     else:
-        print(f"❌ Failed to connect, return code {reason_code}\n")
+        print(f" Failed to connect, return code {reason_code}\n")
 
 def on_message(client, userdata, msg):
     """Callback được gọi khi nhận được một tin nhắn từ topic đã subscribe."""
@@ -86,7 +86,7 @@ def on_message(client, userdata, msg):
             print(f"  -> Unknown command: '{command}'")
 
     except Exception as e:
-        print(f"  ❌ Could not parse or execute command: {e}")
+        print(f"   Could not parse or execute command: {e}")
     print("-" * 20)
 
 
@@ -97,14 +97,14 @@ client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"farm-{FARM_ID
 
 # 2. Gán các hàm callback
 client.on_connect = on_connect
-client.on_message = on_message # ✅ Gán hàm on_message
+client.on_message = on_message #  Gán hàm on_message
 
 # 3. Kết nối tới broker
 try:
     print(f"🔗 Connecting to broker at {MQTT_BROKER}:{MQTT_PORT}...")
     client.connect(MQTT_BROKER, MQTT_PORT)
 except Exception as e:
-    print(f"❌ Could not connect to MQTT Broker: {e}")
+    print(f" Could not connect to MQTT Broker: {e}")
     exit()
 
 # 4. Bắt đầu vòng lặp mạng (xử lý kết nối, subscribe, và nhận message trong thread riêng)
@@ -126,7 +126,7 @@ try:
             result = client.publish(topic, payload, qos=1)
             status = result.rc
             if status != 0:
-                print(f"  ❌ Failed to send message to topic {topic}, status code: {status}")
+                print(f"   Failed to send message to topic {topic}, status code: {status}")
 
         time.sleep(PUBLISH_INTERVAL_SECONDS)
 

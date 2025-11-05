@@ -13,39 +13,47 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.Customizer; // 1. THÊM IMPORT NÀY
+import org.springframework.security.config.Customizer;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    // ... (các bean khác không đổi) ...
+    /**
+     * - Cấp phát AuthenticationManager từ AuthenticationConfiguration.
+     * - Dùng cho quá trình authenticate (ví dụ trong AuthController khi login).
+     * - Spring sẽ tự wire UserDetailsService và PasswordEncoder vào flow xác thực.
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
+    // Định nghĩa PasswordEncoder sử dụng BCrypt.
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Cấu hình chuỗi bộ lọc bảo mật.
+     * - Cấu hình CORS, CSRF, quy tắc truy cập URL, quản lý session, và bộ lọc JWT.
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
             throws Exception {
         http
-                // 2. THÊM DÒNG NÀY VÀO ĐẦU TIÊN
                 .cors(Customizer.withDefaults())
 
-                // Tắt CSRF vì chúng ta dùng JWT
+                // Tắt CSRF vì dùng JWT
                 .csrf(AbstractHttpConfigurer::disable)
 
                 // Cấu hình quy tắc cho các request HTTP
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/**", "/ws/**").permitAll()
-                        .requestMatchers("GET", "/api/farms/**").authenticated() // ✅ Thêm dòng này
-                        .requestMatchers("POST", "/api/farms/*/rules").authenticated() // ✅ Allow POST rules
-                        .requestMatchers("DELETE", "/api/farms/*/rules/**").authenticated() // ✅ Allow DELETE rules
+                        .requestMatchers("GET", "/api/farms/**").authenticated()
+                        .requestMatchers("POST", "/api/farms/*/rules").authenticated() // Allow POST rules
+                        .requestMatchers("DELETE", "/api/farms/*/rules/**").authenticated() // Allow DELETE rules
                         .anyRequest().authenticated())
 
                 // Cấu hình quản lý session

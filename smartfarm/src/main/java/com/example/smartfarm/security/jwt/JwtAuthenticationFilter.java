@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
-import org.springframework.util.AntPathMatcher; // 1. THÊM IMPORT NÀY
+import org.springframework.util.AntPathMatcher;
 
 @Component
 
@@ -30,6 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
+    // Phương thức chính của filter: được Spring Security gọi cho mỗi request.
     @Override
     protected void doFilterInternal(HttpServletRequest request,
             HttpServletResponse response, FilterChain filterChain) throws ServletException,
@@ -58,6 +59,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     }
 
+    // Trích xuất chuỗi JWT từ header "Authorization"
     private String parsejwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer")) {
@@ -67,7 +69,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 
-    // 2. THÊM PHƯƠNG THỨC NÀY VÀO
+    // Bỏ qua không lọc các request đến endpoint của WebSocket
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         // Bỏ qua không lọc các request đến endpoint của WebSocket

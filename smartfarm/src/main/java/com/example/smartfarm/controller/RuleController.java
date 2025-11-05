@@ -22,6 +22,7 @@ public class RuleController {
     @Autowired
     private RuleService ruleService;
 
+    // TẠO QUY TẮC MỚI
     @PostMapping
     public ResponseEntity<?> createRule(
             @PathVariable Long farmId,
@@ -37,6 +38,7 @@ public class RuleController {
         }
     }
 
+    // LẤY DANH SÁCH QUY TẮC THEO NÔNG TRẠI
     @GetMapping
     public ResponseEntity<?> getRulesByFarm(
             @PathVariable Long farmId,
