@@ -8,7 +8,6 @@ import { PageHeader } from '@ant-design/pro-layout';
 import { Thermometer, Droplet, Sun, Zap } from 'lucide-react';
 import { PlusOutlined } from '@ant-design/icons';
 import apiClient from '../../services/api';
-// Thư viện để kết nối STOMP WebSocket (phù hợp với Spring Boot)
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
@@ -86,7 +85,6 @@ const FarmDetailPage: React.FC = () => {
         }
 
         // Tạm thời dữ liệu giả cho devices và rules vì backend chưa có API GET
-        // KHI BẠN THÊM API, HÃY BỎ COMMENT CÁC ĐOẠN DƯỚỚI
         setDevices([
             { id: 1, name: "Cảm biến DHT22", type: "SENSOR_TEMPERATURE", deviceIdentifier: "sensor-dht22-01" },
             { id: 2, name: "Máy bơm chính", type: "PUMP", deviceIdentifier: "pump-01" },
