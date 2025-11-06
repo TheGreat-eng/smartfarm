@@ -1,3 +1,5 @@
+// File: smartfarm/src/main/java/com/example/smartfarm/repository/SensorDataRepository.java
+
 package com.example.smartfarm.repository;
 
 import com.example.smartfarm.model.SensorData;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 public class SensorDataRepository {
@@ -25,11 +28,70 @@ public class SensorDataRepository {
     private String org;
 
     public void save(SensorData sensorData) {
-        WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
-        writeApi.writeMeasurement(bucket, org, WritePrecision.NS, sensorData);
+        try {
+            WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
+            writeApi.writeMeasurement(bucket, org, WritePrecision.NS, sensorData);
+            System.out.println("✅ Saved to InfluxDB: " + sensorData); // THÊM LOG
+        } catch (Exception e) {
+            System.err.println("❌ Error saving to InfluxDB: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
+    // DÁN PHƯƠNG THỨC ĐÃ SỬA LỖI VÀO ĐÂY
+    public List<SensorData> findLatestDataForFarm(String farmIdStr) {
+        System.out.println("🔍 Querying InfluxDB for farmId: " + farmIdStr); // THÊM LOG
+        String fluxQuery = String.format(
+                "from(bucket: \"%s\")\n" +
+                        "  |> range(start: -1d)\n" +
+                        "  |> filter(fn: (r) => r._measurement == \"sensor_data\")\n" +
+                        "  |> filter(fn: (r) => r.farmId == \"%s\")\n" +
+                        "  |> group(columns: [\"metricType\"])\n" +
+                        "  |> last()",
+                bucket, farmIdStr);
+
+        System.out.println("📊 Query: " + fluxQuery); // THÊM LOG
+        List<FluxTable> tables = influxDBClient.getQueryApi().query(fluxQuery, org);
+        System.out.println("📦 Result tables: " + tables.size()); // THÊM LOG
+
+        // Phần xử lý kết quả giữ nguyên như trước
+        return tables.stream()
+                .flatMap(table -> table.getRecords().stream())
+                .map(record -> {
+                    SensorData data = new SensorData();
+
+                    Object farmIdValue = record.getValueByKey("farmId");
+                    if (farmIdValue != null) {
+                        data.setFarmId(farmIdValue.toString());
+                    }
+
+                    Object sensorIdValue = record.getValueByKey("sensorId");
+                    if (sensorIdValue != null) {
+                        data.setSensorId(sensorIdValue.toString());
+                    }
+
+                    Object metricTypeValue = record.getValueByKey("metricType");
+                    if (metricTypeValue != null) {
+                        data.setMetricType(metricTypeValue.toString());
+                    }
+
+                    Object value = record.getValue();
+                    if (value instanceof Double) {
+                        data.setValue((Double) value);
+                    } else if (value instanceof Long) {
+                        data.setValue(((Long) value).doubleValue());
+                    }
+
+                    data.setTime(record.getTime());
+                    return data;
+                })
+                .collect(Collectors.toList());
+    }
+
+    //
+
     public Optional<SensorData> findLatestBySensorIdAndMetric(String sensorId, String metricType) {
+        // ... (phương thức này giữ nguyên, không thay đổi)
         String fluxQuery = String.format(
                 "from(bucket: \"%s\")\n" +
                         "  |> range(start: -1d)\n" +

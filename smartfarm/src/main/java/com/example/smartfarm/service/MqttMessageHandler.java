@@ -6,25 +6,28 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.mqtt.support.MqttHeaders;
-import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.MessagingException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
 @Service
 @Slf4j
-public class MqttMessageHandler {
+public class MqttMessageHandler implements MessageHandler {
 
     @Autowired
     private SensorDataRepository sensorDataRepository;
     @Autowired
     private ObjectMapper objectMapper;
 
-    // Lắng nghe tất cả các topic con bên trong smartfarm/data/
-    @ServiceActivator(inputChannel = "mqttInputChannel")
-    public void handleMessage(String payload, @Header(MqttHeaders.RECEIVED_TOPIC) String topic) {
+    @Override
+    public void handleMessage(Message<?> message) throws MessagingException {
+        String topic = message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC, String.class);
+        String payload = message.getPayload().toString();
+
         log.info("Received MQTT message on topic [{}]: {}", topic, payload);
         try {
             // Cấu trúc topic: smartfarm/data/{farmId}/{sensorId}/{metricType}
@@ -34,10 +37,9 @@ public class MqttMessageHandler {
                 return;
             }
             String farmId = topicParts[2];
-            String sensorIdentifier = topicParts[3]; // Đổi tên để khớp với model
+            String sensorIdentifier = topicParts[3];
             String metricType = topicParts[4];
 
-            // Xử lý payload JSON: {"value": 25.5}
             JsonNode rootNode = objectMapper.readTree(payload);
             if (!rootNode.has("value")) {
                 log.warn("Payload does not contain 'value' field: {}", payload);
@@ -47,7 +49,7 @@ public class MqttMessageHandler {
 
             SensorData data = new SensorData();
             data.setFarmId(farmId);
-            data.setSensorId(sensorIdentifier); // Sử dụng deviceIdentifier của cảm biến
+            data.setSensorId(sensorIdentifier);
             data.setMetricType(metricType);
             data.setValue(value);
             data.setTime(Instant.now());

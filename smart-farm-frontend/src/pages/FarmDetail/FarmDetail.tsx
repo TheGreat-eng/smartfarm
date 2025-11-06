@@ -8,7 +8,6 @@ import { PageHeader } from '@ant-design/pro-layout';
 import { Thermometer, Droplet, Sun, Zap } from 'lucide-react';
 import { PlusOutlined } from '@ant-design/icons';
 import apiClient from '../../services/api';
-// Thư viện để kết nối STOMP WebSocket (phù hợp với Spring Boot)
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
@@ -48,6 +47,16 @@ interface Rule {
     actuatorDeviceId: number;
 }
 
+function parseJwt(token: string) {
+    try {
+        // Lấy phần payload (thứ 2) của token, decode từ base64 và parse JSON
+        return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+        console.error("Failed to parse JWT", e);
+        return null;
+    }
+}
+
 const FarmDetailPage: React.FC = () => {
     const { farmId } = useParams<{ farmId: string }>();
     const navigate = useNavigate();
@@ -74,10 +83,20 @@ const FarmDetailPage: React.FC = () => {
         // Lấy dữ liệu cảm biến
         try {
             const sensorResponse = await apiClient.get<SensorDataResponse[]>(`/farms/${farmId}/sensordata/latest`);
+
+            // SỬA LẠI LOGIC REDUCE Ở ĐÂY
             const formattedData: SensorData = sensorResponse.data.reduce((acc, item) => {
-                acc[item.metricType as keyof SensorData] = item.value;
+                // Chuyển metricType từ API về chữ thường để đảm bảo khớp
+                const key = item.metricType.toLowerCase();
+
+                // Chỉ gán nếu key là một trong các giá trị mong đợi
+                if (key === 'temperature' || key === 'humidity' || key === 'soil_moisture' || key === 'light') {
+                    acc[key as keyof SensorData] = item.value;
+                }
                 return acc;
             }, {} as SensorData);
+            // KẾT THÚC PHẦN SỬA
+
             setSensorData(formattedData);
         } catch (error) {
             console.error('Không thể tải dữ liệu cảm biến!');
@@ -86,7 +105,6 @@ const FarmDetailPage: React.FC = () => {
         }
 
         // Tạm thời dữ liệu giả cho devices và rules vì backend chưa có API GET
-        // KHI BẠN THÊM API, HÃY BỎ COMMENT CÁC ĐOẠN DƯỚỚI
         setDevices([
             { id: 1, name: "Cảm biến DHT22", type: "SENSOR_TEMPERATURE", deviceIdentifier: "sensor-dht22-01" },
             { id: 2, name: "Máy bơm chính", type: "PUMP", deviceIdentifier: "pump-01" },
@@ -102,6 +120,7 @@ const FarmDetailPage: React.FC = () => {
         // TODO: BỎ COMMENT KHI CÓ API
         // Lấy danh sách thiết bị
         try {
+            setLoading(prev => ({ ...prev, devices: true })); // Bật loading trước khi fetch
             const deviceResponse = await apiClient.get<Device[]>(`/farms/${farmId}/devices`);
             setDevices(deviceResponse.data);
         } catch (error) {
@@ -112,6 +131,7 @@ const FarmDetailPage: React.FC = () => {
 
         // Lấy danh sách luật
         try {
+            setLoading(prev => ({ ...prev, rules: true })); // Bật loading trước khi fetch
             const ruleResponse = await apiClient.get<Rule[]>(`/farms/${farmId}/rules`);
             setRules(ruleResponse.data);
         } catch (error) {
@@ -131,11 +151,17 @@ const FarmDetailPage: React.FC = () => {
 
     // --- 2. KẾT NỐI WEBSOCKET ---
     useEffect(() => {
-        // TODO: Cần lấy userId từ JWT token, hiện đang giả lập là 1
-        const userId = 1;
         const token = localStorage.getItem('authToken');
-
         if (!token) return;
+
+        // Lấy thông tin user từ token
+        const decodedToken = parseJwt(token);
+        const userId = decodedToken?.userId;
+
+        if (!userId) {
+            console.error("User ID not found in JWT token.");
+            return;
+        }
 
         const client = new Client({
             webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
@@ -150,6 +176,7 @@ const FarmDetailPage: React.FC = () => {
 
         client.onConnect = (frame) => {
             console.log('Connected to WebSocket!');
+            // Sử dụng userId động
             client.subscribe(`/topic/notifications/${userId}`, (message) => {
                 const notificationPayload = JSON.parse(message.body);
                 notification.info({
@@ -208,8 +235,10 @@ const FarmDetailPage: React.FC = () => {
     };
 
     // Lọc ra các thiết bị cảm biến và thiết bị điều khiển
-    const sensorDevices = devices.filter(d => d.type.includes('SENSOR'));
-    const actuatorDevices = devices.filter(d => !d.type.includes('SENSOR'));
+    const sensorDevices = devices.filter(d => d.type.toUpperCase().includes('SENSOR'));
+
+    // SỬA LẠI BỘ LỌC Ở ĐÂY
+    const actuatorDevices = devices.filter(d => !d.type.toUpperCase().includes('SENSOR'));
 
     // --- 4. RENDER GIAO DIỆN ---
     const isLoading = loading.sensors || loading.devices || loading.rules;
