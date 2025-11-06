@@ -1,6 +1,8 @@
 package com.example.smartfarm.config;
 
+import com.example.smartfarm.service.MqttMessageHandler;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,7 +20,6 @@ import org.springframework.messaging.MessageHandler;
 @Configuration
 public class MqttConfig {
 
-    // Đọc các giá trị cấu hình từ application.properties
     @Value("${mqtt.broker.url}")
     private String brokerUrl;
     @Value("${mqtt.client.id}")
@@ -26,7 +27,9 @@ public class MqttConfig {
     @Value("${mqtt.topic.data}")
     private String dataTopic;
 
-    // Tạo MqttClientFactory — cấu hình kết nối đến broker MQTT
+    @Autowired
+    private MqttMessageHandler mqttMessageHandler;
+
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
@@ -39,13 +42,13 @@ public class MqttConfig {
         return factory;
     }
 
-    // Tạo kênh inbound channel — nơi nhận message từ MQTT broker
+    // --- Inbound (Nhận dữ liệu cảm biến) ---
+
     @Bean
     public MessageChannel mqttInputChannel() {
         return new DirectChannel();
     }
 
-    // Adapter inbound — lắng nghe topic cảm biến và đẩy dữ liệu vào hệ thống
     @Bean
     public MessageProducer inbound() {
         MqttPahoMessageDrivenChannelAdapter adapter = new MqttPahoMessageDrivenChannelAdapter(
@@ -54,23 +57,30 @@ public class MqttConfig {
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(1);
         adapter.setOutputChannel(mqttInputChannel());
+        adapter.setAutoStartup(true);
         return adapter;
     }
 
+    // ĐỔI TÊN METHOD NÀY: mqttMessageHandler -> mqttInboundHandler
+    @Bean
+    @ServiceActivator(inputChannel = "mqttInputChannel")
+    public MessageHandler mqttInboundHandler() {
+        return mqttMessageHandler; // Trả về bean MqttMessageHandler đã inject
+    }
+
     // --- Outbound (Gửi lệnh điều khiển) ---
+
     @Bean
     public MessageChannel mqttOutboundChannel() {
         return new DirectChannel();
     }
 
-    // MessageHandler outbound — xử lý việc gửi message lên MQTT broker.
     @Bean
     @ServiceActivator(inputChannel = "mqttOutboundChannel")
     public MessageHandler mqttOutbound() {
         MqttPahoMessageHandler messageHandler = new MqttPahoMessageHandler(
                 clientId + "_outbound", mqttClientFactory());
         messageHandler.setAsync(true);
-        messageHandler.setDefaultTopic("smartfarm/control/default");
         return messageHandler;
     }
 }

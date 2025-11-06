@@ -13,7 +13,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -32,26 +34,49 @@ public class RuleExecutionScheduler {
     private NotificationService notificationService;
 
     // THỰC THI CÁC QUY TẮC
-    @Scheduled(fixedRate = 30000) // Run every 30 seconds
-    @Transactional // Thêm annotation này
+    @Scheduled(fixedRate = 30000)
+    @Transactional
     public void executeRules() {
         log.info("Executing rules...");
         List<Rule> enabledRules = ruleRepository.findByEnabled(true);
 
-        for (Rule rule : enabledRules) {
-            Optional<SensorData> latestData = sensorDataRepository.findLatestBySensorIdAndMetric(
-                    rule.getSensorDevice().getDeviceIdentifier(), rule.getConditionMetric());
-
-            latestData.ifPresent(data -> {
-                boolean conditionMet = evaluateCondition(data.getValue(), rule.getConditionOperator(),
-                        rule.getConditionValue());
-                if (conditionMet) {
-                    log.info("Rule '{}' condition met for sensor '{}' with value {}. Triggering action.",
-                            rule.getName(), data.getSensorId(), data.getValue());
-                    triggerAction(rule);
-                }
-            });
+        if (enabledRules.isEmpty()) {
+            return;
         }
+
+        // Tối ưu: Nhóm các luật theo farmId
+        Map<Long, List<Rule>> rulesByFarm = enabledRules.stream()
+                .collect(Collectors.groupingBy(rule -> rule.getFarm().getId()));
+
+        // Lặp qua mỗi farm
+        rulesByFarm.forEach((farmId, rules) -> {
+            // Lấy TẤT CẢ dữ liệu mới nhất của farm này trong 1 truy vấn
+            List<SensorData> latestFarmData = sensorDataRepository.findLatestDataForFarm(String.valueOf(farmId));
+
+            // Chuyển thành Map để truy cập nhanh
+            Map<String, Double> dataMap = latestFarmData.stream()
+                    .collect(Collectors.toMap(
+                            data -> data.getSensorId() + ":" + data.getMetricType(),
+                            SensorData::getValue,
+                            (v1, v2) -> v1 // Trong trường hợp có key trùng lặp, giữ lại giá trị đầu tiên
+            ));
+
+            // Bây giờ xử lý các luật trong bộ nhớ, không cần query DB nữa
+            for (Rule rule : rules) {
+                String key = rule.getSensorDevice().getDeviceIdentifier() + ":" + rule.getConditionMetric();
+                Double currentValue = dataMap.get(key);
+
+                if (currentValue != null) {
+                    boolean conditionMet = evaluateCondition(currentValue, rule.getConditionOperator(),
+                            rule.getConditionValue());
+                    if (conditionMet) {
+                        log.info("Rule '{}' condition met for sensor '{}' with value {}. Triggering action.",
+                                rule.getName(), key, currentValue);
+                        triggerAction(rule);
+                    }
+                }
+            }
+        });
     }
 
     // ĐÁNH GIÁ ĐIỀU KIỆN CỦA QUY TẮC

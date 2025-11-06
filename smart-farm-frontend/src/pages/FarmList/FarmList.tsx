@@ -118,7 +118,7 @@ const FarmListPage: React.FC = () => {
             {/* ---- MODAL THÊM NÔNG TRẠI ---- */}
             <Modal
                 title="Thêm Nông Trại Mới"
-                visible={isModalVisible}
+                open={isModalVisible}
                 onOk={() => form.submit()} // Khi nhấn OK, submit form
                 onCancel={handleCancel}
                 okText="Thêm"
