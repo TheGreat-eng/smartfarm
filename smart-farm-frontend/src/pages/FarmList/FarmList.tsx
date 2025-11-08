@@ -1,4 +1,3 @@
-// Thêm các import cần thiết
 import React, { useState, useEffect } from 'react';
 import { Layout, Typography, List, Card, Button, message, Modal, Form, Input } from 'antd'; // Thêm Modal, Form, Input
 import { LogoutOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'; // Thêm EditOutlined, DeleteOutlined
@@ -6,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/api';
 const { Header, Content } = Layout;
 const { Title } = Typography;
-// ... (Interface Farm, Header, Content, Title không đổi) ...
 interface Farm {
     id: number;
     name: string;

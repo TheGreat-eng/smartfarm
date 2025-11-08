@@ -29,9 +29,23 @@ public class SensorDataRepository {
 
     public void save(SensorData sensorData) {
         try {
+            // ⚠️ THÊM: Validate dữ liệu trước khi save
+            if (sensorData.getSensorId() == null || sensorData.getSensorId().isEmpty()) {
+                System.err.println("❌ Error: sensorId is null or empty");
+                return;
+            }
+            if (sensorData.getFarmId() == null || sensorData.getFarmId().isEmpty()) {
+                System.err.println("❌ Error: farmId is null or empty");
+                return;
+            }
+            if (sensorData.getMetricType() == null || sensorData.getMetricType().isEmpty()) {
+                System.err.println("❌ Error: metricType is null or empty");
+                return;
+            }
+
             WriteApiBlocking writeApi = influxDBClient.getWriteApiBlocking();
             writeApi.writeMeasurement(bucket, org, WritePrecision.NS, sensorData);
-            System.out.println("✅ Saved to InfluxDB: " + sensorData); // THÊM LOG
+            System.out.println("✅ Saved to InfluxDB: " + sensorData);
         } catch (Exception e) {
             System.err.println("❌ Error saving to InfluxDB: " + e.getMessage());
             e.printStackTrace();
