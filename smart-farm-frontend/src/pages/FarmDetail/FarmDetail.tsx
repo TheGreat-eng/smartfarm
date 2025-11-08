@@ -86,7 +86,6 @@ const FarmDetailPage: React.FC = () => {
 
             // SỬA LẠI LOGIC REDUCE Ở ĐÂY
             const formattedData: SensorData = sensorResponse.data.reduce((acc, item) => {
-                // Chuyển metricType từ API về chữ thường để đảm bảo khớp
                 const key = item.metricType.toLowerCase();
 
                 // Chỉ gán nếu key là một trong các giá trị mong đợi
@@ -103,8 +102,6 @@ const FarmDetailPage: React.FC = () => {
         } finally {
             setLoading(prev => ({ ...prev, sensors: false }));
         }
-
-        // Tạm thời dữ liệu giả cho devices và rules vì backend chưa có API GET
         setDevices([
             { id: 1, name: "Cảm biến DHT22", type: "SENSOR_TEMPERATURE", deviceIdentifier: "sensor-dht22-01" },
             { id: 2, name: "Máy bơm chính", type: "PUMP", deviceIdentifier: "pump-01" },

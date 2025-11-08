@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@EnableScheduling // THÊM ANNOTATION NÀY
+@EnableScheduling
 public class SmartfarmApplication {
 
 	public static void main(String[] args) {
