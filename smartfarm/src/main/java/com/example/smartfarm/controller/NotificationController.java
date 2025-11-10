@@ -17,7 +17,7 @@ public class NotificationController {
      * Client gửi tin nhắn đến '/app/hello', server nhận, xử lý và gửi lại
      * một tin nhắn chào mừng đến topic '/topic/greetings'.
      *
-     * @param message Đối tượng chứa tin nhắn từ client (ví dụ: {"name": "John"})
+     * @param message Đối tượng chứa tin nhắn từ client (ví dụ: {"name": "toan"})
      * @return Một đối tượng NotificationDTO sẽ được gửi đến tất cả các client
      *         đang subscribe vào '/topic/greetings'.
      * @throws InterruptedException

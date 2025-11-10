@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Typography, List, Card, Button, message, Modal, Form, Input } from 'antd'; // Thêm Modal, Form, Input
-import { LogoutOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'; // Thêm EditOutlined, DeleteOutlined
+import { LogoutOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, } from '@ant-design/icons'; // Thêm EditOutlined, DeleteOutlined
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/api';
+
+
+
 const { Header, Content } = Layout;
 const { Title } = Typography;
+
+const { confirm } = Modal; // Thêm confirm
+
 interface Farm {
     id: number;
     name: string;
@@ -19,6 +25,16 @@ const FarmListPage: React.FC = () => {
     // State cho Modal thêm nông trại
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [form] = Form.useForm(); // Hook để quản lý Form
+
+
+    const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+
+    // --- THÊM STATE CHO VIỆC SỬA ---
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
+
+    const [addForm] = Form.useForm();
+    const [editForm] = Form.useForm(); // Form riêng cho việc sửa
 
     const fetchFarms = async () => {
         try {
@@ -49,9 +65,11 @@ const FarmListPage: React.FC = () => {
         navigate(`/farms/${farmId}`);
     };
 
-    // ---- CHỨC NĂNG THÊM MỚI ----
-    const showAddFarmModal = () => {
-        setIsModalVisible(true);
+    // ---- CHỨC NĂNG THÊM MỚI (đổi tên state)----
+    const showAddFarmModal = () => setIsAddModalVisible(true);
+    const handleAddCancel = () => {
+        setIsAddModalVisible(false);
+        addForm.resetFields();
     };
 
     const handleCancel = () => {
@@ -68,6 +86,52 @@ const FarmListPage: React.FC = () => {
         } catch (error) {
             message.error('Thêm nông trại thất bại!');
         }
+    };
+
+    // --- THÊM CHỨC NĂNG SỬA ---
+    const showEditFarmModal = (farm: Farm) => {
+        setEditingFarm(farm);
+        editForm.setFieldsValue(farm); // Điền dữ liệu cũ vào form
+        setIsEditModalVisible(true);
+    };
+
+    const handleEditCancel = () => {
+        setIsEditModalVisible(false);
+        setEditingFarm(null);
+        editForm.resetFields();
+    };
+
+    const handleUpdateFarm = async (values: { name: string; location: string }) => {
+        if (!editingFarm) return;
+        try {
+            await apiClient.put(`/farms/${editingFarm.id}`, values);
+            message.success(`Cập nhật nông trại thành công!`);
+            fetchFarms();
+            handleEditCancel();
+        } catch (error) {
+            message.error('Cập nhật thất bại!');
+        }
+    };
+
+    // --- THÊM CHỨC NĂNG XÓA ---
+    const showDeleteConfirm = (farmId: number, farmName: string) => {
+        confirm({
+            title: `Bạn có chắc muốn xóa nông trại "${farmName}"?`,
+            icon: <ExclamationCircleOutlined />,
+            content: 'Hành động này không thể hoàn tác. Tất cả thiết bị và quy tắc liên quan cũng sẽ bị xóa.',
+            okText: 'Xóa',
+            okType: 'danger',
+            cancelText: 'Hủy',
+            onOk: async () => {
+                try {
+                    await apiClient.delete(`/farms/${farmId}`);
+                    message.success(`Đã xóa nông trại "${farmName}".`);
+                    fetchFarms();
+                } catch (error) {
+                    message.error('Xóa nông trại thất bại!');
+                }
+            },
+        });
     };
 
 
@@ -100,13 +164,36 @@ const FarmListPage: React.FC = () => {
                                 title={farm.name}
                                 hoverable
                                 onClick={() => handleFarmClick(farm.id)}
-                                // Thêm nút Sửa và Xóa
-                                actions={[
-                                    <EditOutlined key="edit" onClick={(e) => { e.stopPropagation(); message.info('Chức năng sửa sắp ra mắt!'); }} />,
-                                    <DeleteOutlined key="delete" onClick={(e) => { e.stopPropagation(); message.error('Chức năng xóa sắp ra mắt!'); }} />,
-                                ]}
                             >
                                 <p><strong>Vị trí:</strong> {farm.location}</p>
+                                <div
+                                    style={{
+                                        marginTop: '16px',
+                                        paddingTop: '16px',
+                                        borderTop: '1px solid #f0f0f0',
+                                        display: 'flex',
+                                        justifyContent: 'space-around'
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <Button
+                                        type="text"
+                                        icon={<EditOutlined />}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            showEditFarmModal(farm);
+                                        }}
+                                    />
+                                    <Button
+                                        type="text"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            showDeleteConfirm(farm.id, farm.name);
+                                        }}
+                                    />
+                                </div>
                             </Card>
                         </List.Item>
                     )}
@@ -116,14 +203,14 @@ const FarmListPage: React.FC = () => {
             {/* ---- MODAL THÊM NÔNG TRẠI ---- */}
             <Modal
                 title="Thêm Nông Trại Mới"
-                open={isModalVisible}
-                onOk={() => form.submit()} // Khi nhấn OK, submit form
-                onCancel={handleCancel}
+                open={isAddModalVisible}
+                onOk={addForm.submit}
+                onCancel={handleAddCancel}
                 okText="Thêm"
                 cancelText="Hủy"
             >
                 <Form
-                    form={form}
+                    form={addForm}
                     layout="vertical"
                     onFinish={handleAddFarm} // Hàm xử lý khi form được submit thành công
                 >
@@ -143,6 +230,26 @@ const FarmListPage: React.FC = () => {
                     </Form.Item>
                 </Form>
             </Modal>
+
+            {/* --- THÊM MODAL SỬA NÔNG TRẠI --- */}
+            <Modal
+                title="Chỉnh Sửa Nông Trại"
+                open={isEditModalVisible}
+                onOk={editForm.submit}
+                onCancel={handleEditCancel}
+                okText="Lưu thay đổi"
+                cancelText="Hủy"
+            >
+                <Form form={editForm} layout="vertical" onFinish={handleUpdateFarm}>
+                    <Form.Item name="name" label="Tên Nông Trại" rules={[{ required: true, message: 'Vui lòng nhập tên nông trại!' }]}>
+                        <Input placeholder="Ví dụ: Vườn Rau Sạch Đà Lạt" />
+                    </Form.Item>
+                    <Form.Item name="location" label="Vị Trí" rules={[{ required: true, message: 'Vui lòng nhập vị trí!' }]}>
+                        <Input placeholder="Ví dụ: Lâm Đồng" />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
         </Layout>
     );
 };

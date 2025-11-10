@@ -85,4 +85,22 @@ public class DeviceController {
         }
     }
 
+    @PutMapping("{deviceId}")
+    public ResponseEntity<DeviceResponse> updateDevice(
+            @PathVariable Long farmId, @PathVariable Long deviceId,
+            @Valid @RequestBody DeviceRequest deviceRequest, @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
+        Device updatedDevice = deviceService.updateDevice(deviceId, deviceRequest, userDetailsImpl.getId());
+
+        return ResponseEntity.ok(new DeviceResponse(updatedDevice));
+    }
+
+    @DeleteMapping("{deviceId}")
+    public ResponseEntity<?> deleteDeivce(@PathVariable Long farmId, @PathVariable Long deviceId,
+            @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
+
+        deviceService.deleteDevice(deviceId, userDetailsImpl.getId());
+
+        return ResponseEntity.ok().body("Delete Device Successfully");
+    }
+
 }

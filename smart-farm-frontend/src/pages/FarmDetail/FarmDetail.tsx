@@ -6,11 +6,12 @@ import {
 } from 'antd';
 import { PageHeader } from '@ant-design/pro-layout';
 import { Thermometer, Droplet, Sun, Zap } from 'lucide-react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import apiClient from '../../services/api';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
+const { confirm } = Modal;
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -19,7 +20,7 @@ const { Option } = Select;
 interface SensorData {
     temperature?: number;
     humidity?: number;
-    soil_moisture?: number; // Cập nhật cho đúng với simulator
+    soil_moisture?: number;
     light?: number;
 }
 
@@ -32,7 +33,7 @@ interface SensorDataResponse {
 interface Device {
     id: number;
     name: string;
-    type: string; // "SENSOR_TEMPERATURE", "PUMP", etc.
+    type: string;
     deviceIdentifier: string;
 }
 
@@ -49,7 +50,6 @@ interface Rule {
 
 function parseJwt(token: string) {
     try {
-        // Lấy phần payload (thứ 2) của token, decode từ base64 và parse JSON
         return JSON.parse(atob(token.split('.')[1]));
     } catch (e) {
         console.error("Failed to parse JWT", e);
@@ -71,53 +71,37 @@ const FarmDetailPage: React.FC = () => {
         rules: true
     });
 
-    // States cho các Modal (cửa sổ pop-up)
-    const [isDeviceModalVisible, setIsDeviceModalVisible] = useState(false);
-    const [isRuleModalVisible, setIsRuleModalVisible] = useState(false);
+    // States cho Modal
+    const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+    const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
+    const [editingRule, setEditingRule] = useState<Rule | null>(null);
+    const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
+
     const [deviceForm] = Form.useForm();
     const [ruleForm] = Form.useForm();
 
-
-    // --- 1. HÀM LẤY DỮ LIỆU TỪ BACKEND ---
+    // --- HÀM LẤY DỮ LIỆU TỪ BACKEND ---
     const fetchData = useCallback(async () => {
         // Lấy dữ liệu cảm biến
         try {
             const sensorResponse = await apiClient.get<SensorDataResponse[]>(`/farms/${farmId}/sensordata/latest`);
-
-            // SỬA LẠI LOGIC REDUCE Ở ĐÂY
             const formattedData: SensorData = sensorResponse.data.reduce((acc, item) => {
                 const key = item.metricType.toLowerCase();
-
-                // Chỉ gán nếu key là một trong các giá trị mong đợi
                 if (key === 'temperature' || key === 'humidity' || key === 'soil_moisture' || key === 'light') {
                     acc[key as keyof SensorData] = item.value;
                 }
                 return acc;
             }, {} as SensorData);
-            // KẾT THÚC PHẦN SỬA
-
             setSensorData(formattedData);
         } catch (error) {
             console.error('Không thể tải dữ liệu cảm biến!');
         } finally {
             setLoading(prev => ({ ...prev, sensors: false }));
         }
-        setDevices([
-            { id: 1, name: "Cảm biến DHT22", type: "SENSOR_TEMPERATURE", deviceIdentifier: "sensor-dht22-01" },
-            { id: 2, name: "Máy bơm chính", type: "PUMP", deviceIdentifier: "pump-01" },
-            { id: 3, name: "Cảm biến độ ẩm đất", type: "SENSOR_SOIL_MOISTURE", deviceIdentifier: "sensor-soil-01" },
-        ]);
-        setLoading(prev => ({ ...prev, devices: false }));
-        setRules([
-            { id: 1, name: "Tự động bơm khi đất khô", conditionMetric: "soil_moisture", conditionOperator: "<", conditionValue: 40, actionType: "TURN_ON", sensorDeviceId: 3, actuatorDeviceId: 2 },
-        ]);
-        setLoading(prev => ({ ...prev, rules: false }));
 
-
-        // TODO: BỎ COMMENT KHI CÓ API
         // Lấy danh sách thiết bị
         try {
-            setLoading(prev => ({ ...prev, devices: true })); // Bật loading trước khi fetch
+            setLoading(prev => ({ ...prev, devices: true }));
             const deviceResponse = await apiClient.get<Device[]>(`/farms/${farmId}/devices`);
             setDevices(deviceResponse.data);
         } catch (error) {
@@ -128,7 +112,7 @@ const FarmDetailPage: React.FC = () => {
 
         // Lấy danh sách luật
         try {
-            setLoading(prev => ({ ...prev, rules: true })); // Bật loading trước khi fetch
+            setLoading(prev => ({ ...prev, rules: true }));
             const ruleResponse = await apiClient.get<Rule[]>(`/farms/${farmId}/rules`);
             setRules(ruleResponse.data);
         } catch (error) {
@@ -136,22 +120,19 @@ const FarmDetailPage: React.FC = () => {
         } finally {
             setLoading(prev => ({ ...prev, rules: false }));
         }
-
-
     }, [farmId]);
 
     useEffect(() => {
         fetchData();
-        const intervalId = setInterval(fetchData, 10000); // Cập nhật dữ liệu mỗi 10s
+        const intervalId = setInterval(fetchData, 10000);
         return () => clearInterval(intervalId);
     }, [fetchData]);
 
-    // --- 2. KẾT NỐI WEBSOCKET ---
+    // --- KẾT NỐI WEBSOCKET ---
     useEffect(() => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
 
-        // Lấy thông tin user từ token
         const decodedToken = parseJwt(token);
         const userId = decodedToken?.userId;
 
@@ -171,9 +152,8 @@ const FarmDetailPage: React.FC = () => {
             reconnectDelay: 5000,
         });
 
-        client.onConnect = (frame) => {
+        client.onConnect = () => {
             console.log('Connected to WebSocket!');
-            // Sử dụng userId động
             client.subscribe(`/topic/notifications/${userId}`, (message) => {
                 const notificationPayload = JSON.parse(message.body);
                 notification.info({
@@ -196,8 +176,116 @@ const FarmDetailPage: React.FC = () => {
         };
     }, []);
 
+    // --- XỬ LÝ THIẾT BỊ ---
+    const showDeviceModal = (device: Device | null = null) => {
+        if (device) {
+            setEditingDevice(device);
+            deviceForm.setFieldsValue(device);
+        } else {
+            setEditingDevice(null);
+            deviceForm.resetFields();
+        }
+        setIsDeviceModalOpen(true);
+    };
 
-    // --- 3. HÀM XỬ LÝ LOGIC ---
+    const handleDeviceModalCancel = () => {
+        setIsDeviceModalOpen(false);
+        setEditingDevice(null);
+        deviceForm.resetFields();
+    };
+
+    const handleDeviceFormSubmit = async (values: any) => {
+        try {
+            if (editingDevice) {
+                await apiClient.put(`/farms/${farmId}/devices/${editingDevice.id}`, values);
+                message.success('Cập nhật thiết bị thành công!');
+            } else {
+                await apiClient.post(`/farms/${farmId}/devices`, values);
+                message.success('Thêm thiết bị thành công!');
+            }
+            handleDeviceModalCancel();
+            fetchData();
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || (editingDevice ? 'Cập nhật thất bại!' : 'Thêm thất bại!');
+            message.error(errorMsg);
+        }
+    };
+
+    const handleDeleteDevice = (device: Device) => {
+        confirm({
+            title: `Bạn có chắc muốn xóa thiết bị "${device.name}"?`,
+            icon: <ExclamationCircleOutlined />,
+            content: 'Nếu thiết bị này đang được dùng trong quy tắc, quy tắc đó có thể sẽ không hoạt động.',
+            onOk: async () => {
+                try {
+                    await apiClient.delete(`/farms/${farmId}/devices/${device.id}`);
+                    message.success('Đã xóa thiết bị.');
+                    fetchData();
+                } catch (error) {
+                    message.error('Xóa thất bại!');
+                }
+            },
+        });
+    };
+
+    // --- XỬ LÝ QUY TẮC ---
+    const showRuleModal = (rule: Rule | null = null) => {
+        if (rule) {
+            setEditingRule(rule);
+            ruleForm.setFieldsValue({
+                ...rule,
+                conditionValue: rule.conditionValue.toString()
+            });
+        } else {
+            setEditingRule(null);
+            ruleForm.resetFields();
+        }
+        setIsRuleModalOpen(true);
+    };
+
+    const handleRuleModalCancel = () => {
+        setIsRuleModalOpen(false);
+        setEditingRule(null);
+        ruleForm.resetFields();
+    };
+
+    const handleRuleFormSubmit = async (values: any) => {
+        const payload = {
+            ...values,
+            conditionValue: parseFloat(values.conditionValue)
+        };
+        try {
+            if (editingRule) {
+                await apiClient.put(`/farms/${farmId}/rules/${editingRule.id}`, payload);
+                message.success('Cập nhật quy tắc thành công!');
+            } else {
+                await apiClient.post(`/farms/${farmId}/rules`, payload);
+                message.success('Thêm quy tắc thành công!');
+            }
+            handleRuleModalCancel();
+            fetchData();
+        } catch (error) {
+            message.error(editingRule ? 'Cập nhật thất bại!' : 'Thêm thất bại!');
+        }
+    };
+
+    const handleDeleteRule = (rule: Rule) => {
+        confirm({
+            title: `Bạn có chắc muốn xóa quy tắc "${rule.name}"?`,
+            icon: <ExclamationCircleOutlined />,
+            onOk: async () => {
+                try {
+                    await apiClient.delete(`/farms/${farmId}/rules/${rule.id}`);
+                    message.success('Đã xóa quy tắc.');
+                    fetchData();
+                } catch (error) {
+                    message.error('Xóa thất bại!');
+                }
+            },
+        });
+    };
+
+    // --- ĐIỀU KHIỂN THIẾT BỊ ---
     const handleControlDevice = async (deviceId: number, deviceIdentifier: string, command: 'TURN_ON' | 'TURN_OFF') => {
         try {
             await apiClient.post(`/farms/${farmId}/devices/${deviceId}/control`, { command });
@@ -207,37 +295,10 @@ const FarmDetailPage: React.FC = () => {
         }
     };
 
-    const handleAddDevice = async (values: any) => {
-        try {
-            await apiClient.post(`/farms/${farmId}/devices`, values);
-            message.success('Thêm thiết bị thành công!');
-            setIsDeviceModalVisible(false);
-            deviceForm.resetFields();
-            fetchData(); // <-- TẢI LẠI DỮ LIỆU ĐỂ CẬP NHẬT GIAO DIỆN
-        } catch (error) {
-            message.error('Thêm thiết bị thất bại!');
-        }
-    };
-
-    const handleAddRule = async (values: any) => {
-        try {
-            await apiClient.post(`/farms/${farmId}/rules`, values);
-            message.success('Thêm luật thành công!');
-            setIsRuleModalVisible(false);
-            ruleForm.resetFields();
-            fetchData(); // <-- TẢI LẠI DỮ LIỆU ĐỂ CẬP NHẬT GIAO DIỆN
-        } catch (error) {
-            message.error('Thêm luật thất bại!');
-        }
-    };
-
-    // Lọc ra các thiết bị cảm biến và thiết bị điều khiển
+    // Lọc thiết bị
     const sensorDevices = devices.filter(d => d.type.toUpperCase().includes('SENSOR'));
-
-    // SỬA LẠI BỘ LỌC Ở ĐÂY
     const actuatorDevices = devices.filter(d => !d.type.toUpperCase().includes('SENSOR'));
 
-    // --- 4. RENDER GIAO DIỆN ---
     const isLoading = loading.sensors || loading.devices || loading.rules;
 
     return (
@@ -245,10 +306,12 @@ const FarmDetailPage: React.FC = () => {
             <Content style={{ padding: '24px' }}>
                 <PageHeader onBack={() => navigate('/farms')} title={`Chi tiết Nông trại #${farmId}`} />
                 {isLoading ? (
-                    <div style={{ textAlign: 'center', padding: '50px' }}> <Spin size="large" /> </div>
+                    <div style={{ textAlign: 'center', padding: '50px' }}>
+                        <Spin size="large" />
+                    </div>
                 ) : (
                     <>
-                        {/* Phần hiển thị thông số môi trường */}
+                        {/* Thông số môi trường */}
                         <Title level={4}>Thông số môi trường</Title>
                         <Row gutter={[16, 16]}>
                             <Col xs={24} sm={12} md={6}>
@@ -283,7 +346,7 @@ const FarmDetailPage: React.FC = () => {
 
                         <Divider />
 
-                        {/* Phần điều khiển thiết bị */}
+                        {/* Bảng điều khiển */}
                         <Title level={4}>Bảng điều khiển</Title>
                         <Row gutter={[16, 16]}>
                             {actuatorDevices.map(device => (
@@ -299,20 +362,45 @@ const FarmDetailPage: React.FC = () => {
                             ))}
                         </Row>
 
-
                         <Divider />
 
-                        {/* Phần quản lý thiết bị và quy tắc */}
+                        {/* Quản lý thiết bị và quy tắc */}
                         <Row gutter={[24, 24]}>
                             <Col xs={24} md={12}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Title level={4}>Danh sách thiết bị</Title>
-                                    <Button icon={<PlusOutlined />} onClick={() => setIsDeviceModalVisible(true)}>Thêm thiết bị</Button>
+                                    <Button icon={<PlusOutlined />} onClick={() => showDeviceModal()}>Thêm thiết bị</Button>
                                 </div>
                                 <List
                                     dataSource={devices}
                                     renderItem={item => (
-                                        <List.Item>
+                                        <List.Item
+                                            actions={[
+                                                <Button
+                                                    key="edit"
+                                                    type="text"
+                                                    icon={<EditOutlined />}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        showDeviceModal(item);
+                                                    }}
+                                                    style={{ padding: '4px 8px' }}
+                                                />,
+                                                <Button
+                                                    key="delete"
+                                                    type="text"
+                                                    danger
+                                                    icon={<DeleteOutlined />}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleDeleteDevice(item);
+                                                    }}
+                                                    style={{ padding: '4px 8px' }}
+                                                />
+                                            ]}
+                                        >
                                             <List.Item.Meta title={item.name} description={`ID: ${item.deviceIdentifier}`} />
                                             <Tag color={item.type.includes('SENSOR') ? 'blue' : 'green'}>{item.type}</Tag>
                                         </List.Item>
@@ -322,13 +410,42 @@ const FarmDetailPage: React.FC = () => {
                             <Col xs={24} md={12}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Title level={4}>Quy tắc tự động</Title>
-                                    <Button icon={<PlusOutlined />} onClick={() => setIsRuleModalVisible(true)}>Thêm quy tắc</Button>
+                                    <Button icon={<PlusOutlined />} onClick={() => showRuleModal()}>Thêm quy tắc</Button>
                                 </div>
                                 <List
                                     dataSource={rules}
                                     renderItem={item => (
-                                        <List.Item>
-                                            <List.Item.Meta title={item.name} description={`Nếu ${item.conditionMetric} ${item.conditionOperator} ${item.conditionValue} thì ${item.actionType} thiết bị #${item.actuatorDeviceId}`} />
+                                        <List.Item
+                                            actions={[
+                                                <Button
+                                                    key="edit"
+                                                    type="text"
+                                                    icon={<EditOutlined />}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        showRuleModal(item);
+                                                    }}
+                                                    style={{ padding: '4px 8px' }}
+                                                />,
+                                                <Button
+                                                    key="delete"
+                                                    type="text"
+                                                    danger
+                                                    icon={<DeleteOutlined />}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleDeleteRule(item);
+                                                    }}
+                                                    style={{ padding: '4px 8px' }}
+                                                />
+                                            ]}
+                                        >
+                                            <List.Item.Meta
+                                                title={item.name}
+                                                description={`Nếu ${item.conditionMetric} ${item.conditionOperator} ${item.conditionValue} thì ${item.actionType} thiết bị #${item.actuatorDeviceId}`}
+                                            />
                                         </List.Item>
                                     )}
                                 />
@@ -337,16 +454,23 @@ const FarmDetailPage: React.FC = () => {
                     </>
                 )}
 
-                {/* Modal thêm thiết bị */}
-                <Modal title="Thêm thiết bị mới" open={isDeviceModalVisible} onOk={deviceForm.submit} onCancel={() => setIsDeviceModalVisible(false)}>
-                    <Form form={deviceForm} layout="vertical" onFinish={handleAddDevice}>
-                        <Form.Item name="name" label="Tên thiết bị" rules={[{ required: true }]}>
+                {/* MODAL THIẾT BỊ */}
+                <Modal
+                    title={editingDevice ? "Chỉnh sửa thiết bị" : "Thêm thiết bị mới"}
+                    open={isDeviceModalOpen}
+                    onOk={deviceForm.submit}
+                    onCancel={handleDeviceModalCancel}
+                    okText={editingDevice ? "Lưu" : "Thêm"}
+                    cancelText="Hủy"
+                >
+                    <Form form={deviceForm} layout="vertical" onFinish={handleDeviceFormSubmit}>
+                        <Form.Item name="name" label="Tên thiết bị" rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}>
                             <Input placeholder="Vd: Máy bơm số 1" />
                         </Form.Item>
-                        <Form.Item name="deviceIdentifier" label="Định danh (Identifier)" rules={[{ required: true }]}>
+                        <Form.Item name="deviceIdentifier" label="Định danh (Identifier)" rules={[{ required: true, message: 'Vui lòng nhập identifier!' }]}>
                             <Input placeholder="Vd: pump-01 (phải là duy nhất)" />
                         </Form.Item>
-                        <Form.Item name="type" label="Loại thiết bị" rules={[{ required: true }]}>
+                        <Form.Item name="type" label="Loại thiết bị" rules={[{ required: true, message: 'Vui lòng chọn loại!' }]}>
                             <Select placeholder="Chọn loại thiết bị">
                                 <Option value="PUMP">Máy bơm (PUMP)</Option>
                                 <Option value="FAN">Quạt (FAN)</Option>
@@ -360,9 +484,17 @@ const FarmDetailPage: React.FC = () => {
                     </Form>
                 </Modal>
 
-                {/* Modal thêm luật */}
-                <Modal title="Thêm luật tự động mới" open={isRuleModalVisible} onOk={ruleForm.submit} onCancel={() => setIsRuleModalVisible(false)} width={600}>
-                    <Form form={ruleForm} layout="vertical" onFinish={handleAddRule}>
+                {/* MODAL QUY TẮC */}
+                <Modal
+                    title={editingRule ? "Chỉnh sửa quy tắc" : "Thêm luật tự động mới"}
+                    open={isRuleModalOpen}
+                    onOk={ruleForm.submit}
+                    onCancel={handleRuleModalCancel}
+                    okText={editingRule ? "Lưu" : "Thêm"}
+                    cancelText="Hủy"
+                    width={600}
+                >
+                    <Form form={ruleForm} layout="vertical" onFinish={handleRuleFormSubmit}>
                         <Form.Item name="name" label="Tên luật" rules={[{ required: true }]}>
                             <Input placeholder="Vd: Tự động bật máy bơm khi đất khô" />
                         </Form.Item>
@@ -420,7 +552,6 @@ const FarmDetailPage: React.FC = () => {
                         </Row>
                     </Form>
                 </Modal>
-
             </Content>
         </Layout>
     );

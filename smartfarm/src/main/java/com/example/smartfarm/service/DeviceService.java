@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -92,4 +93,36 @@ public class DeviceService {
 
         return deviceRepository.findAllByFarmId(farmId);
     }
+
+    public Device updateDevice(Long deviceId, DeviceRequest deviceRequest, Long userId) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new RuntimeException("Device not found with id: " + deviceId));
+        if (!device.getFarm().getUser().getId().equals(userId)) {
+            throw new SecurityException("User does not have permission");
+        }
+
+        // Kiểm tra nếu deviceIdentifier thay đổi và đã tồn tại
+        if (!device.getDeviceIdentifier().equals(deviceRequest.getDeviceIdentifier()) &&
+                deviceRepository.existsByDeviceIdentifier(deviceRequest.getDeviceIdentifier())) {
+            throw new DataIntegrityViolationException(
+                    "Device identifier '" + deviceRequest.getDeviceIdentifier() + "' already exists.");
+        }
+
+        device.setName(deviceRequest.getName());
+        device.setType(deviceRequest.getType());
+        device.setDeviceIdentifier(deviceRequest.getDeviceIdentifier());
+
+        return deviceRepository.save(device);
+    }
+
+    public void deleteDevice(Long deviceId, Long userId) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new RuntimeException("Device not found with id: " + deviceId));
+        if (!device.getFarm().getUser().getId().equals(userId)) {
+            throw new SecurityException("User does not have permission");
+        }
+
+        deviceRepository.delete(device);
+    }
+
 }

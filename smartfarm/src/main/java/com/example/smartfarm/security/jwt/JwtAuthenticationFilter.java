@@ -72,8 +72,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     // Bỏ qua không lọc các request đến endpoint của WebSocket
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        // Bỏ qua không lọc các request đến endpoint của WebSocket
-        return new AntPathMatcher().match("/ws/**", request.getServletPath());
+        String path = request.getServletPath();
+        // Bỏ qua filter cho các endpoint auth và websocket
+        return path.startsWith("/api/auth/") ||
+                new AntPathMatcher().match("/ws/**", path);
     }
 
 }

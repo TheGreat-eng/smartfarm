@@ -1,5 +1,6 @@
 package com.example.smartfarm.controller;
 
+import com.example.smartfarm.dto.DeviceResponse;
 import com.example.smartfarm.dto.RuleRequest;
 import com.example.smartfarm.dto.RuleResponse;
 import com.example.smartfarm.model.Rule;
@@ -7,6 +8,7 @@ import com.example.smartfarm.security.services.UserDetailsImpl;
 import com.example.smartfarm.service.RuleService;
 import jakarta.validation.Valid;
 
+import java.security.DrbgParameters.Reseed;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,5 +54,27 @@ public class RuleController {
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(e.getMessage());
         }
+    }
+
+    @PutMapping("{ruleId}")
+    public ResponseEntity<RuleResponse> updateRule(@PathVariable Long ruleId, @PathVariable Long farmId,
+
+            @RequestBody RuleRequest ruleRequest, @AuthenticationPrincipal UserDetailsImpl userDetailsImpl
+
+    ) {
+        Rule updatedRule = ruleService.updateRule(ruleId, ruleRequest, userDetailsImpl.getId());
+
+        return ResponseEntity.ok(new RuleResponse(updatedRule));
+    }
+
+    @DeleteMapping("{ruleId}")
+    public ResponseEntity<String> deleteRule(@PathVariable Long ruleId, @PathVariable Long farmId,
+
+            @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
+
+        ruleService.deleteRule(ruleId, userDetailsImpl.getId());
+
+        return ResponseEntity.ok().body("Delete Rule Successfully");
+
     }
 }

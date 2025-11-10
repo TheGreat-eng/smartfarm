@@ -9,18 +9,29 @@ import com.example.smartfarm.dto.AuthResponse;
 import com.example.smartfarm.dto.LoginRequest;
 import com.example.smartfarm.dto.RegisterRequest;
 import com.example.smartfarm.service.AuthService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
     @Autowired
     private AuthService authService;
 
     // ĐĂNG NHẬP
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        String jwt = authService.authenticateUser(loginRequest);
-        return ResponseEntity.ok(new AuthResponse(jwt));
+        logger.info("Login attempt for user: {}", loginRequest.getUsername());
+        try {
+            String jwt = authService.authenticateUser(loginRequest);
+            logger.info("Login successful for user: {}", loginRequest.getUsername());
+            return ResponseEntity.ok(new AuthResponse(jwt));
+        } catch (Exception e) {
+            logger.error("Login failed for user: {}", loginRequest.getUsername(), e);
+            return ResponseEntity.status(403).body("Invalid username or password");
+        }
     }
 
     // ĐĂNG KÝ
