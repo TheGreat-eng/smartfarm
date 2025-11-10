@@ -2,6 +2,7 @@ package com.example.smartfarm.controller;
 
 import com.example.smartfarm.dto.FarmRequest;
 import com.example.smartfarm.dto.FarmResponse;
+import com.example.smartfarm.model.Farm;
 import com.example.smartfarm.security.services.UserDetailsImpl;
 import com.example.smartfarm.service.FarmService;
 import jakarta.validation.Valid;
@@ -35,5 +36,20 @@ public class FarmController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         FarmResponse newFarm = new FarmResponse(farmService.createFarm(farmRequest, userDetails.getId()));
         return ResponseEntity.ok(newFarm);
+    }
+
+    @PutMapping("/{farmId}")
+    public ResponseEntity<FarmResponse> updateFarm(@PathVariable Long farmId,
+            @Valid @RequestBody FarmRequest farmRequest,
+            @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
+        Farm updatedFarm = farmService.updateFarm(farmId, farmRequest, userDetailsImpl.getId());
+        return ResponseEntity.ok(new FarmResponse(updatedFarm));
+    }
+
+    @DeleteMapping("/{farmId}")
+    public ResponseEntity<Void> deleteFarm(@PathVariable Long farmId,
+            @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
+        farmService.deleteFarm(farmId, userDetailsImpl.getId());
+        return ResponseEntity.noContent().build();
     }
 }

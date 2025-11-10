@@ -70,4 +70,51 @@ public class RuleService {
         }
         return ruleRepository.findAllByFarmId(farmId);
     }
+
+    @Transactional
+    public Rule updateRule(Long ruleId, RuleRequest ruleRequest, Long userId) {
+
+        Rule rule = ruleRepository.findById(ruleId).orElseThrow(() -> new RuntimeException(
+                "Rule not found"));
+
+        if (!rule.getFarm().getUser().getId().equals(userId)) {
+            throw new SecurityException("User does not have permission");
+        }
+
+        Device sensor = deviceRepository.findById(ruleRequest.getSensorDeviceId())
+                .orElseThrow(() -> new RuntimeException("Sensor device not found"));
+        Device actuator = deviceRepository.findById(ruleRequest.getActuatorDeviceId())
+                .orElseThrow(() -> new RuntimeException("Actuator device not found"));
+
+        if (!sensor.getFarm().getId().equals(rule.getFarm().getId())
+                || !actuator.getFarm().getId().equals(rule.getFarm().getId())) {
+            throw new SecurityException("Devices do not belong to the rule's farm");
+        }
+
+        rule.setName(ruleRequest.getName());
+        rule.setConditionMetric(ruleRequest.getConditionMetric());
+        rule.setConditionOperator(ruleRequest.getConditionOperator());
+        rule.setConditionValue(ruleRequest.getConditionValue());
+        rule.setActionType(ruleRequest.getActionType());
+        rule.setActionDuration(ruleRequest.getActionDuration());
+        rule.setSensorDevice(sensor);
+        rule.setActuatorDevice(actuator);
+
+        return ruleRepository.save(rule);
+
+    }
+
+    @Transactional
+    public void deleteRule(Long ruleId, Long userId) {
+        Rule rule = ruleRepository.findById(ruleId).orElseThrow(() -> new RuntimeException(
+                "Rule not found"));
+
+        if (!rule.getFarm().getUser().getId().equals(userId)) {
+            throw new SecurityException("User does not have permission");
+        }
+
+        ruleRepository.delete(rule);
+
+    }
+
 }

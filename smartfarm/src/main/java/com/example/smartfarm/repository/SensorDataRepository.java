@@ -105,7 +105,6 @@ public class SensorDataRepository {
     //
 
     public Optional<SensorData> findLatestBySensorIdAndMetric(String sensorId, String metricType) {
-        // ... (phương thức này giữ nguyên, không thay đổi)
         String fluxQuery = String.format(
                 "from(bucket: \"%s\")\n" +
                         "  |> range(start: -1d)\n" +
