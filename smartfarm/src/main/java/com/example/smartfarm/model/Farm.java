@@ -32,4 +32,10 @@ public class Farm {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    // THÊM DÒNG NÀY: Cascade delete cho devices và rules
+    @OneToMany(mappedBy = "farm", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<Device> devices;
+
+    @OneToMany(mappedBy = "farm", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<Rule> rules;
 }
