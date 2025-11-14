@@ -1,3 +1,6 @@
+# File: simulator.py
+# (Phiên bản cuối cùng, đã sửa lỗi on_disconnect và cải tiến kết nối)
+
 import paho.mqtt.client as mqtt
 import time
 import json
@@ -6,18 +9,18 @@ from datetime import datetime
 import math
 
 # --- CONFIGURATION ---
-MQTT_BROKER = "test.mosquitto.org"
+MQTT_BROKER = "localhost" # Đảm bảo broker đang chạy trên localhost
 MQTT_PORT = 1883
 PUBLISH_INTERVAL_SECONDS = 10
 
-FARM_ID = 1
+FARM_ID = 5
 
 # Danh sách các thiết bị cảm biến mà script này sẽ giả lập
 DEVICES = [
-    {"identifier": "sensor-dht22-01", "type": "SENSOR_TEMPERATURE", "value": 28.0},
-    {"identifier": "sensor-dht22-01", "type": "SENSOR_HUMIDITY", "value": 75.0},
-    {"identifier": "sensor-soil-01", "type": "SENSOR_SOIL_MOISTURE", "value": 60.0},
-    {"identifier": "sensor-light-01", "type": "SENSOR_LIGHT", "value": 30000.0}
+    {"identifier": "sensor-dht22-0001", "type": "SENSOR_TEMPERATURE", "value": 28.0},
+    {"identifier": "sensor-dht22-0002", "type": "SENSOR_HUMIDITY", "value": 75.0},
+    {"identifier": "sensor-soil-0001", "type": "SENSOR_SOIL_MOISTURE", "value": 60.0},
+    {"identifier": "sensor-light-0001", "type": "SENSOR_LIGHT", "value": 30000.0}
 ]
 
 # --- SIMULATION LOGIC  ---
@@ -49,21 +52,38 @@ def simulate_sensor_value(device):
             return round(max(0, new_value), 0)
         else:
             return round(random.uniform(0, 100), 0)
-    return current_value
+    return 32.0  # Giá trị mặc định nếu không xác định được loại cảm biến
 
 # --- MQTT CLIENT CALLBACKS ---
 
+connected_flag = False
+
 def on_connect(client, userdata, flags, reason_code, properties):
     """Callback được gọi khi kết nối thành công."""
+    global connected_flag
     if reason_code == 0:
-        print(" Connected to MQTT Broker successfully!")
-        #  SỬA ĐỔI: Subscribe vào topic điều khiển ngay khi kết nối
-        # Dấu '#' sẽ nhận lệnh cho TẤT CẢ các thiết bị
+        print("✅ Connected to MQTT Broker successfully!")
+        connected_flag = True
         control_topic = "smartfarm/control/#"
         client.subscribe(control_topic) 
         print(f"  -> Subscribed to `{control_topic}` to listen for commands.")
     else:
-        print(f" Failed to connect, return code {reason_code}\n")
+        print(f"❌ Failed to connect, return code {reason_code}\n")
+        connected_flag = False
+
+# =========================================================================
+# SỬA LỖI CHÍNH LÀ Ở HÀM NÀY
+# Định nghĩa lại on_disconnect với đúng 5 tham số của API v2
+def on_disconnect(client, userdata, flags, reason_code, properties):
+    """Callback được gọi khi mất kết nối."""
+    global connected_flag
+    # reason_code=None có thể xảy ra khi người dùng chủ động disconnect
+    if reason_code is not None and reason_code != 0:
+        print(f"🔌 Unexpected disconnection from MQTT Broker with reason code: {reason_code}")
+    else:
+        print("🔌 Disconnected from MQTT Broker.")
+    connected_flag = False
+# =========================================================================
 
 def on_message(client, userdata, msg):
     """Callback được gọi khi nhận được một tin nhắn từ topic đã subscribe."""
@@ -73,7 +93,6 @@ def on_message(client, userdata, msg):
     print(f"  Payload: `{msg.payload.decode()}`")
     
     try:
-        # Giả lập hành động của thiết bị khi nhận lệnh
         device_identifier = msg.topic.split('/')[-1]
         payload = json.loads(msg.payload.decode())
         command = payload.get("command")
@@ -92,29 +111,32 @@ def on_message(client, userdata, msg):
 
 # --- MAIN SCRIPT EXECUTION ---
 
-# 1. Khởi tạo client với cú pháp paho-mqtt v2.x
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"farm-{FARM_ID}-simulator")
-
-# 2. Gán các hàm callback
 client.on_connect = on_connect
-client.on_message = on_message #  Gán hàm on_message
+client.on_disconnect = on_disconnect
+client.on_message = on_message
 
-# 3. Kết nối tới broker
 try:
     print(f"🔗 Connecting to broker at {MQTT_BROKER}:{MQTT_PORT}...")
     client.connect(MQTT_BROKER, MQTT_PORT)
 except Exception as e:
-    print(f" Could not connect to MQTT Broker: {e}")
+    print(f"❌ Could not connect to MQTT Broker: {e}")
     exit()
 
-# 4. Bắt đầu vòng lặp mạng (xử lý kết nối, subscribe, và nhận message trong thread riêng)
 client.loop_start()
 
-# 5. Vòng lặp chính để gửi dữ liệu cảm biến
+print("⏳ Waiting for connection...")
+while not connected_flag:
+    time.sleep(1)
+print("🚀 Connection established. Starting data publication.")
+
 try:
-    time.sleep(2) # Đợi một chút để kết nối và subscribe ổn định
-    
     while True:
+        if not connected_flag:
+            print("...Connection lost, waiting to reconnect...")
+            time.sleep(5)
+            continue
+
         print(f"\nPublishing sensor data for Farm ID: {FARM_ID} at {datetime.now()}")
         
         for device in DEVICES:
@@ -125,8 +147,9 @@ try:
             
             result = client.publish(topic, payload, qos=1)
             status = result.rc
+            
             if status != 0:
-                print(f"   Failed to send message to topic {topic}, status code: {status}")
+                print(f"   ⚠️  Failed to send message to topic {topic}, status code: {status}")
 
         time.sleep(PUBLISH_INTERVAL_SECONDS)
 
@@ -135,4 +158,3 @@ except KeyboardInterrupt:
 finally:
     client.loop_stop()
     client.disconnect()
-    print("🔌 Disconnected from MQTT Broker.")

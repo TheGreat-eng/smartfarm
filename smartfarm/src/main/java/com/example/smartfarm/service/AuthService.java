@@ -43,6 +43,7 @@ public class AuthService {
                 registerRequest.getEmail(),
                 passwordEncoder.encode(registerRequest.getPassword()),
                 registerRequest.getFullName());
+
         return userRepository.save(user);
     }
 
