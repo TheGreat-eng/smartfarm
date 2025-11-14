@@ -52,7 +52,6 @@ public class SensorDataRepository {
         }
     }
 
-    // DÁN PHƯƠNG THỨC ĐÃ SỬA LỖI VÀO ĐÂY
     public List<SensorData> findLatestDataForFarm(String farmIdStr) {
         System.out.println("🔍 Querying InfluxDB for farmId: " + farmIdStr); // THÊM LOG
         String fluxQuery = String.format(

@@ -95,7 +95,7 @@ public class DeviceController {
     }
 
     @DeleteMapping("{deviceId}")
-    public ResponseEntity<?> deleteDeivce(@PathVariable Long farmId, @PathVariable Long deviceId,
+    public ResponseEntity<?> deleteDevice(@PathVariable Long farmId, @PathVariable Long deviceId,
             @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
 
         deviceService.deleteDevice(deviceId, userDetailsImpl.getId());

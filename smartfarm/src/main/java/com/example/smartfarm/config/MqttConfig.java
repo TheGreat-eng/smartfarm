@@ -35,7 +35,13 @@ public class MqttConfig {
         DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
         MqttConnectOptions options = new MqttConnectOptions();
         options.setServerURIs(new String[] { brokerUrl });
-        options.setAutomaticReconnect(true);
+
+        // --- THAY ĐỔI QUAN TRỌNG NHẤT ---
+        // Tắt cơ chế tự kết nối lại của Paho.
+        // Hãy để Spring Integration tự quản lý việc kết nối lại,
+        // vì nó nhận biết được vòng đời của ứng dụng.
+        options.setAutomaticReconnect(false);
+
         options.setCleanSession(true);
         options.setConnectionTimeout(10);
         factory.setConnectionOptions(options);
@@ -57,11 +63,10 @@ public class MqttConfig {
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(1);
         adapter.setOutputChannel(mqttInputChannel());
-        adapter.setAutoStartup(true);
+        // Spring sẽ tự động start bean này, không cần setAutoStartup(true)
         return adapter;
     }
 
-    // ĐỔI TÊN METHOD NÀY: mqttMessageHandler -> mqttInboundHandler
     @Bean
     @ServiceActivator(inputChannel = "mqttInputChannel")
     public MessageHandler mqttInboundHandler() {

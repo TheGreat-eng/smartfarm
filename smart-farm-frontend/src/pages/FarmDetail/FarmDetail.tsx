@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Layout, Typography, Button, message, Row, Col, Card, Spin, Divider,
-    Modal, Form, Input, Select, List, Tag, notification
+    Modal, Form, Input, Select, List, Tag, notification, App
 } from 'antd';
 import { PageHeader } from '@ant-design/pro-layout';
 import { Thermometer, Droplet, Sun, Zap } from 'lucide-react';
@@ -11,7 +11,6 @@ import apiClient from '../../services/api';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-const { confirm } = Modal;
 const { Content } = Layout;
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -60,6 +59,7 @@ function parseJwt(token: string) {
 const FarmDetailPage: React.FC = () => {
     const { farmId } = useParams<{ farmId: string }>();
     const navigate = useNavigate();
+    const { modal } = App.useApp(); // Thêm dòng này
 
     // States cho dữ liệu
     const [sensorData, setSensorData] = useState<SensorData>({});
@@ -212,10 +212,13 @@ const FarmDetailPage: React.FC = () => {
     };
 
     const handleDeleteDevice = (device: Device) => {
-        confirm({
+        modal.confirm({
             title: `Bạn có chắc muốn xóa thiết bị "${device.name}"?`,
             icon: <ExclamationCircleOutlined />,
             content: 'Nếu thiết bị này đang được dùng trong quy tắc, quy tắc đó có thể sẽ không hoạt động.',
+            okText: 'Xóa',
+            okType: 'danger',
+            cancelText: 'Hủy',
             onOk: async () => {
                 try {
                     await apiClient.delete(`/farms/${farmId}/devices/${device.id}`);
@@ -270,9 +273,13 @@ const FarmDetailPage: React.FC = () => {
     };
 
     const handleDeleteRule = (rule: Rule) => {
-        confirm({
+        modal.confirm({
             title: `Bạn có chắc muốn xóa quy tắc "${rule.name}"?`,
             icon: <ExclamationCircleOutlined />,
+            content: 'Hành động này không thể hoàn tác.',
+            okText: 'Xóa',
+            okType: 'danger',
+            cancelText: 'Hủy',
             onOk: async () => {
                 try {
                     await apiClient.delete(`/farms/${farmId}/rules/${rule.id}`);

@@ -10,7 +10,7 @@ const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
-function App() {
+function MyApp() {
   return (
     <BrowserRouter>
       <Routes>
@@ -33,4 +33,4 @@ function App() {
   );
 }
 
-export default App;
+export default MyApp;
