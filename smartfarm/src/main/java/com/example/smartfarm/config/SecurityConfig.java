@@ -51,10 +51,11 @@ public class SecurityConfig {
                 // Cấu hình quy tắc cho các request HTTP
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/**", "/ws/**").permitAll()
-                        .requestMatchers("GET", "/api/farms/**").authenticated()
-                        .requestMatchers("POST", "/api/farms/**").authenticated()
-                        .requestMatchers("PUT", "/api/farms/**").authenticated()
-                        .requestMatchers("DELETE", "/api/farms/**").authenticated()
+                        // ================== SỬA ĐỔI TẠI ĐÂY ==================
+                        // Gộp tất cả các quy tắc cho /api/farms/** thành một dòng duy nhất
+                        // Điều này sẽ áp dụng cho cả endpoint /latest và /history
+                        .requestMatchers("/api/farms/**").authenticated()
+                        // ================== KẾT THÚC SỬA ĐỔI ==================
                         .anyRequest().authenticated())
 
                 // Cấu hình quản lý session

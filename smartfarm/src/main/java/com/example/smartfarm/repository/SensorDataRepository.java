@@ -101,7 +101,47 @@ public class SensorDataRepository {
                 .collect(Collectors.toList());
     }
 
-    //
+    // ================== PHƯƠNG THỨC MỚI ĐỂ LẤY DỮ LIỆU LỊCH SỬ ==================
+    public List<SensorData> findDataForFarmByTimeRange(String farmIdStr, String metricType, String range) {
+        // Xác định khoảng thời gian tổng hợp dữ liệu dựa trên phạm vi truy vấn
+        String windowPeriod = "10m"; // Mặc định 10 phút
+        if (range.equals("1h"))
+            windowPeriod = "1m";
+        if (range.equals("7d"))
+            windowPeriod = "1h";
+
+        String fluxQuery = String.format(
+                "from(bucket: \"%s\")\n" +
+                        "  |> range(start: -%s)\n" +
+                        "  |> filter(fn: (r) => r._measurement == \"sensor_data\")\n" +
+                        "  |> filter(fn: (r) => r.farmId == \"%s\")\n" +
+                        "  |> filter(fn: (r) => r.metricType == \"%s\")\n" +
+                        "  |> aggregateWindow(every: %s, fn: mean, createEmpty: false)\n" + // Lấy giá trị trung bình
+                                                                                            // theo khoảng thời gian
+                        "  |> yield(name: \"mean\")",
+                bucket, range, farmIdStr, metricType, windowPeriod);
+
+        System.out.println("📊 Executing History Query: " + fluxQuery);
+        List<FluxTable> tables = influxDBClient.getQueryApi().query(fluxQuery, org);
+
+        return tables.stream()
+                .flatMap(table -> table.getRecords().stream())
+                .map(record -> {
+                    SensorData data = new SensorData();
+                    data.setMetricType(metricType);
+                    data.setFarmId(farmIdStr);
+                    data.setTime(record.getTime());
+                    Object value = record.getValue();
+                    if (value instanceof Double) {
+                        data.setValue((Double) value);
+                    } else if (value instanceof Long) {
+                        data.setValue(((Long) value).doubleValue());
+                    }
+                    return data;
+                })
+                .collect(Collectors.toList());
+    }
+    // ================== KẾT THÚC PHƯƠNG THỨC MỚI ==================
 
     public Optional<SensorData> findLatestBySensorIdAndMetric(String sensorId, String metricType) {
         String fluxQuery = String.format(

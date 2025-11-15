@@ -32,4 +32,22 @@ public class SensorDataController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // LẤY DỮ LIỆU LỊCH SỬ CẢM BIẾN
+    @GetMapping("/history")
+    public ResponseEntity<?> getSensorDataHistory(
+            @PathVariable Long farmId,
+            @RequestParam String metricType,
+            @RequestParam String range,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        try {
+            List<SensorDataResponse> historyData = sensorDataService.getSensorDataHistory(farmId,
+                    userDetails.getId(), metricType, range);
+            return ResponseEntity.ok(historyData);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

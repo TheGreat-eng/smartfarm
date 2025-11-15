@@ -13,14 +13,14 @@ MQTT_BROKER = "localhost" # Đảm bảo broker đang chạy trên localhost
 MQTT_PORT = 1883
 PUBLISH_INTERVAL_SECONDS = 10
 
-FARM_ID = 5
+FARM_ID = 1
 
 # Danh sách các thiết bị cảm biến mà script này sẽ giả lập
 DEVICES = [
-    {"identifier": "sensor-dht22-0001", "type": "SENSOR_TEMPERATURE", "value": 28.0},
-    {"identifier": "sensor-dht22-0002", "type": "SENSOR_HUMIDITY", "value": 75.0},
-    {"identifier": "sensor-soil-0001", "type": "SENSOR_SOIL_MOISTURE", "value": 60.0},
-    {"identifier": "sensor-light-0001", "type": "SENSOR_LIGHT", "value": 30000.0}
+    {"identifier": "sensor-dht22-01", "type": "SENSOR_TEMPERATURE", "value": 28.0},
+    {"identifier": "sensor-dht22-02", "type": "SENSOR_HUMIDITY", "value": 75.0},
+    {"identifier": "sensor-soil-01", "type": "SENSOR_SOIL_MOISTURE", "value": 60.0},
+    {"identifier": "sensor-light-01", "type": "SENSOR_LIGHT", "value": 30000.0}
 ]
 
 # --- SIMULATION LOGIC  ---
