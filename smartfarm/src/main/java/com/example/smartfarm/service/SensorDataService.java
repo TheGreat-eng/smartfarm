@@ -17,7 +17,6 @@ public class SensorDataService {
 
         @Autowired
         private SensorDataRepository sensorDataRepository;
-        // Bỏ DeviceRepository vì không cần nữa
         @Autowired
         private FarmRepository farmRepository;
 
@@ -31,12 +30,29 @@ public class SensorDataService {
                 }
 
                 // 2. GỌI REPOSITORY để lấy dữ liệu.
-                // Dòng này sẽ gọi phương thức mà chúng ta sắp dán vào file Repository
                 return sensorDataRepository.findLatestDataForFarm(String.valueOf(farmId)).stream()
                                 .map(data -> new SensorDataResponse(data.getMetricType(), data.getValue(),
                                                 data.getTime()))
                                 .collect(Collectors.toList());
         }
 
-        // KHÔNG CÓ PHƯƠNG THỨC findLatestDataForFarm Ở ĐÂY NỮA
+        // ================== PHƯƠNG THỨC MỚI CHO DỮ LIỆU LỊCH SỬ ==================
+        public List<SensorDataResponse> getSensorDataHistory(Long farmId, Long userId, String metricType,
+                        String range) {
+                // 1. Kiểm tra quyền sở hữu
+                Farm farm = farmRepository.findById(farmId)
+                                .orElseThrow(() -> new RuntimeException("Farm not found with id: " + farmId));
+
+                if (!farm.getUser().getId().equals(userId)) {
+                        throw new SecurityException("User does not have permission to access this farm's data");
+                }
+
+                // 2. Gọi repository để lấy dữ liệu lịch sử
+                return sensorDataRepository.findDataForFarmByTimeRange(String.valueOf(farmId), metricType, range)
+                                .stream()
+                                .map(data -> new SensorDataResponse(data.getMetricType(), data.getValue(),
+                                                data.getTime()))
+                                .collect(Collectors.toList());
+        }
+        // ================== KẾT THÚC PHƯƠNG THỨC MỚI ==================
 }
