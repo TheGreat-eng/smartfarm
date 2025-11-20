@@ -1,9 +1,9 @@
 package com.example.smartfarm.config;
 
-import com.example.smartfarm.security.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,7 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.config.Customizer;
+
+import com.example.smartfarm.security.jwt.JwtAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity
@@ -54,7 +55,10 @@ public class SecurityConfig {
                         // ================== SỬA ĐỔI TẠI ĐÂY ==================
                         // Gộp tất cả các quy tắc cho /api/farms/** thành một dòng duy nhất
                         // Điều này sẽ áp dụng cho cả endpoint /latest và /history
+                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+ 
                         .requestMatchers("/api/farms/**").authenticated()
+                        
                         // ================== KẾT THÚC SỬA ĐỔI ==================
                         .anyRequest().authenticated())
 
