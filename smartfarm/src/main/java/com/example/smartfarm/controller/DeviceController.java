@@ -1,21 +1,30 @@
 package com.example.smartfarm.controller;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.smartfarm.annotation.LogActivity;
 import com.example.smartfarm.dto.DeviceRequest;
 import com.example.smartfarm.dto.DeviceResponse;
 import com.example.smartfarm.model.Device;
 import com.example.smartfarm.security.services.UserDetailsImpl;
 import com.example.smartfarm.service.DeviceService;
-import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import com.example.smartfarm.service.MqttGateway;
-import java.util.Map;
-import org.springframework.dao.DataIntegrityViolationException;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/farms/{farmId}/devices")
@@ -26,6 +35,7 @@ public class DeviceController {
 
     // TẠO THIẾT BỊ MỚI
     @PostMapping
+    @LogActivity(value = "TẠO MỚI", entity = "THIẾT BỊ")
     public ResponseEntity<?> createDevice(
             @PathVariable Long farmId,
             @Valid @RequestBody DeviceRequest deviceRequest,
@@ -46,6 +56,7 @@ public class DeviceController {
 
     // 4. TẠO API MỚI ĐỂ ĐIỀU KHIỂN THIẾT BỊ
     @PostMapping("/{deviceId}/control")
+    @LogActivity(value = "ĐIỀU KHIỂN", entity = "THIẾT BỊ")
     public ResponseEntity<?> controlDevice(
             @PathVariable Long deviceId,
             @RequestBody Map<String, String> payload, // Nhận JSON đơn giản {"command": "TURN_ON"}
@@ -69,6 +80,7 @@ public class DeviceController {
 
     // LẤY DANH SÁCH THIẾT BỊ THEO NÔNG TRẠI
     @GetMapping
+    @LogActivity(value = "LẤY DANH SÁCH", entity = "THIẾT BỊ")
     public ResponseEntity<?> getDevicesByFarm(
             @PathVariable Long farmId,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
@@ -86,6 +98,7 @@ public class DeviceController {
     }
 
     @PutMapping("{deviceId}")
+    @LogActivity(value = "CẬP NHẬT", entity = "THIẾT BỊ")
     public ResponseEntity<DeviceResponse> updateDevice(
             @PathVariable Long farmId, @PathVariable Long deviceId,
             @Valid @RequestBody DeviceRequest deviceRequest, @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
@@ -95,6 +108,7 @@ public class DeviceController {
     }
 
     @DeleteMapping("{deviceId}")
+    @LogActivity(value = "XÓA", entity = "THIẾT BỊ")
     public ResponseEntity<?> deleteDevice(@PathVariable Long farmId, @PathVariable Long deviceId,
             @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
 

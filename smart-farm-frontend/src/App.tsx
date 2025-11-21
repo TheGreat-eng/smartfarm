@@ -1,32 +1,62 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import LoginPage from './pages/Login/Login';
 import FarmListPage from './pages/FarmList/FarmList';
 import FarmDetailPage from './pages/FarmDetail/FarmDetail';
-import RegisterPage from './pages/Register/Register'; // 1. Import trang đăng ký
-import type { JSX } from 'react';
+import RegisterPage from './pages/Register/Register';
+import MainLayout from './components/MainLayout';
+import AdminRoute from './components/AdminRoute';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 
-const PrivateRoute = ({ children }: { children: JSX.Element }) => {
+
+
+import LandingPage from './pages/LandingPage/LandingPage';
+
+
+// PrivateRoutes component chỉ xác thực, không chứa layout
+const PrivateRoutes = () => {
   const isAuthenticated = !!localStorage.getItem('authToken');
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;
 };
 
 function MyApp() {
   return (
     <BrowserRouter>
       <Routes>
+
+
+
+
+        {/* --- Route Mặc Định Trỏ Về Landing Page --- */}
+        <Route path="/" element={<LandingPage />} />
+        {/* ------------------------------------------ */}
+
+        {/* Các route không cần layout */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} /> {/* 2. Thêm route */}
+        <Route path="/register" element={<RegisterPage />} />
 
-        <Route
-          path="/farms"
-          element={<PrivateRoute><FarmListPage /></PrivateRoute>}
-        />
-        <Route
-          path="/farms/:farmId"
-          element={<PrivateRoute><FarmDetailPage /></PrivateRoute>}
-        />
 
-        <Route path="/" element={<Navigate to="/farms" />} />
+        {/* --- ROUTE ADMIN (PHẢI CÓ DÒNG NÀY) --- */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        {/* --------------------------------------- */}
+
+        {/* Các route protected - kết hợp layout và xác thực */}
+        <Route element={<PrivateRoutes />}>
+          <Route element={<MainLayout />}>
+            <Route path="/farms" element={<FarmListPage />} />
+            <Route path="/farms/:farmId" element={<FarmDetailPage />} />
+            <Route path="/" element={<Navigate to="/farms" />} />
+          </Route>
+        </Route>
+
+
+        {/* Fallback route */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

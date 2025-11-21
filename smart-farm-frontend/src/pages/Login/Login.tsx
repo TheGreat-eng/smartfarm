@@ -1,10 +1,8 @@
 import React from 'react';
 import { Form, Input, Button, Card, Flex, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import apiClient from '../../services/api'; // Sẽ tạo ở bước 3
-import { Link } from 'react-router-dom'; // Thêm Link
-
+import { useNavigate, Link } from 'react-router-dom';
+import apiClient from '../../services/api';
 
 const { Title } = Typography;
 
@@ -13,25 +11,31 @@ const LoginPage: React.FC = () => {
 
     const onFinish = async (values: any) => {
         try {
-            // Gửi request đăng nhập tới backend
+            // SỬA LỖI TẠI ĐÂY: Truyền đúng object chứa username và password
             const response = await apiClient.post('/auth/login', {
-                username: values.username, // <-- Đúng field backend yêu cầu
+                username: values.username,
                 password: values.password,
             });
 
-            // Giả sử API trả về một object có chứa accessToken
-            const { accessToken } = response.data;
+            // Backend trả về: { accessToken: "...", role: "ROLE_USER" }
+            // Destructuring để lấy token và role
+            const { accessToken, role } = response.data;
 
-            // Lưu token vào localStorage để xác thực cho các request sau
+            // Lưu token và role vào localStorage
             localStorage.setItem('authToken', accessToken);
+            localStorage.setItem('userRole', role);
 
             // Cấu hình header cho các request tiếp theo
             apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
 
             message.success('Đăng nhập thành công!');
 
-            // Chuyển hướng đến trang danh sách nông trại
-            navigate('/farms');
+            // Điều hướng dựa trên Role
+            if (role === 'ROLE_ADMIN') {
+                navigate('/admin');
+            } else {
+                navigate('/farms');
+            }
 
         } catch (error) {
             console.error('Đăng nhập thất bại:', error);
@@ -67,7 +71,6 @@ const LoginPage: React.FC = () => {
                         <Button type="primary" htmlType="submit" block>
                             Đăng nhập
                         </Button>
-                        {/* THÊM DÒNG NÀY */}
                         <div style={{ marginTop: '10px', textAlign: 'center' }}>
                             Chưa có tài khoản? <Link to="/register">Đăng ký ngay!</Link>
                         </div>

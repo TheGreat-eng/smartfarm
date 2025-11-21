@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Typography, List, Card, Button, message, Modal, Form, Input, App } from 'antd';
-import { LogoutOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import {
+    LogoutOutlined,
+    PlusOutlined,
+    EditOutlined,
+    DeleteOutlined,
+    ExclamationCircleOutlined,
+    SafetyCertificateOutlined // Thêm icon cho nút Admin cho đẹp
+} from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/api';
 
@@ -15,7 +22,11 @@ interface Farm {
 
 const FarmListPage: React.FC = () => {
     const navigate = useNavigate();
-    const { modal } = App.useApp(); // Sử dụng hook từ App context
+    const { modal } = App.useApp();
+
+    // --- THÊM: Lấy role của user hiện tại ---
+    const userRole = localStorage.getItem('userRole');
+
     const [farms, setFarms] = useState<Farm[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -44,21 +55,22 @@ const FarmListPage: React.FC = () => {
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
+        localStorage.removeItem('userRole'); // Xóa cả role khi logout
         delete apiClient.defaults.headers.common['Authorization'];
         message.success('Đã đăng xuất!');
-        navigate('/login');
+        navigate('/');
     };
 
     const handleFarmClick = (farmId: number) => {
         navigate(`/farms/${farmId}`);
     };
 
+    // --- Xử lý Thêm ---
     const showAddFarmModal = () => setIsAddModalVisible(true);
     const handleAddCancel = () => {
         setIsAddModalVisible(false);
         addForm.resetFields();
     };
-
     const handleAddFarm = async (values: { name: string; location: string }) => {
         try {
             const response = await apiClient.post('/farms', values);
@@ -70,18 +82,17 @@ const FarmListPage: React.FC = () => {
         }
     };
 
+    // --- Xử lý Sửa ---
     const showEditFarmModal = (farm: Farm) => {
         setEditingFarm(farm);
         editForm.setFieldsValue(farm);
         setIsEditModalVisible(true);
     };
-
     const handleEditCancel = () => {
         setIsEditModalVisible(false);
         setEditingFarm(null);
         editForm.resetFields();
     };
-
     const handleUpdateFarm = async (values: { name: string; location: string }) => {
         if (!editingFarm) return;
         try {
@@ -94,9 +105,8 @@ const FarmListPage: React.FC = () => {
         }
     };
 
+    // --- Xử lý Xóa ---
     const showDeleteConfirm = (farmId: number, farmName: string) => {
-        console.log('showDeleteConfirm called with:', farmId, farmName);
-
         modal.confirm({
             title: `Bạn có chắc muốn xóa nông trại "${farmName}"?`,
             icon: <ExclamationCircleOutlined />,
@@ -105,13 +115,11 @@ const FarmListPage: React.FC = () => {
             okType: 'danger',
             cancelText: 'Hủy',
             onOk: async () => {
-                console.log('Delete confirmed, calling API...');
                 try {
                     await apiClient.delete(`/farms/${farmId}`);
                     message.success(`Đã xóa nông trại "${farmName}".`);
                     fetchFarms();
                 } catch (error) {
-                    console.error('Delete error:', error);
                     message.error('Xóa nông trại thất bại!');
                 }
             },
@@ -119,17 +127,34 @@ const FarmListPage: React.FC = () => {
     };
 
     if (loading) {
-        return <div>Loading...</div>;
+        return <div style={{ padding: 50, textAlign: 'center' }}>Đang tải dữ liệu...</div>;
     }
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>
-                <Title level={3} style={{ color: '#1890ff', margin: 0 }}>Quản Lý Nông Trại</Title>
-                <Button type="primary" icon={<LogoutOutlined />} onClick={handleLogout}>
+            {/* --- PHẦN HEADER ĐÃ ĐƯỢC CẬP NHẬT --- */}
+            <Header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '0 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Title level={3} style={{ color: '#1890ff', margin: '0 20px 0 0' }}>Quản Lý Nông Trại</Title>
+
+                    {/* Kiểm tra quyền Admin để hiển thị nút */}
+                    {userRole === 'ROLE_ADMIN' && (
+                        <Button
+                            type="dashed"
+                            icon={<SafetyCertificateOutlined />}
+                            onClick={() => navigate('/admin')}
+                            style={{ borderColor: '#faad14', color: '#faad14' }} // Màu vàng cam cho nổi bật
+                        >
+                            Trang Admin
+                        </Button>
+                    )}
+                </div>
+
+                <Button type="primary" danger icon={<LogoutOutlined />} onClick={handleLogout}>
                     Đăng xuất
                 </Button>
             </Header>
+
             <Content style={{ padding: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                     <Title level={4}>Danh sách nông trại của bạn</Title>
@@ -181,6 +206,7 @@ const FarmListPage: React.FC = () => {
                 />
             </Content>
 
+            {/* Modal Thêm */}
             <Modal
                 title="Thêm Nông Trại Mới"
                 open={isAddModalVisible}
@@ -189,11 +215,7 @@ const FarmListPage: React.FC = () => {
                 okText="Thêm"
                 cancelText="Hủy"
             >
-                <Form
-                    form={addForm}
-                    layout="vertical"
-                    onFinish={handleAddFarm}
-                >
+                <Form form={addForm} layout="vertical" onFinish={handleAddFarm}>
                     <Form.Item
                         name="name"
                         label="Tên Nông Trại"
@@ -211,6 +233,7 @@ const FarmListPage: React.FC = () => {
                 </Form>
             </Modal>
 
+            {/* Modal Sửa */}
             <Modal
                 title="Chỉnh Sửa Nông Trại"
                 open={isEditModalVisible}
