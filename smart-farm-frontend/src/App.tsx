@@ -1,18 +1,16 @@
+// smart-farm-frontend/src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import LoginPage from './pages/Login/Login';
 import FarmListPage from './pages/FarmList/FarmList';
-import FarmDetailPage from './pages/FarmDetail/FarmDetail';
+import FarmDashboard from './pages/FarmDashboard/FarmDashboard'; // Đổi tên từ FarmDetail
 import RegisterPage from './pages/Register/Register';
 import MainLayout from './components/MainLayout';
 import AdminRoute from './components/AdminRoute';
 import AdminDashboard from './pages/Admin/AdminDashboard';
-
-
-
 import LandingPage from './pages/LandingPage/LandingPage';
+import WeatherPage from './pages/Weather/WeatherPage'; // Nhớ import
 
 
-// PrivateRoutes component chỉ xác thực, không chứa layout
 const PrivateRoutes = () => {
   const isAuthenticated = !!localStorage.getItem('authToken');
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;
@@ -22,20 +20,11 @@ function MyApp() {
   return (
     <BrowserRouter>
       <Routes>
-
-
-
-
-        {/* --- Route Mặc Định Trỏ Về Landing Page --- */}
         <Route path="/" element={<LandingPage />} />
-        {/* ------------------------------------------ */}
-
-        {/* Các route không cần layout */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-
-        {/* --- ROUTE ADMIN (PHẢI CÓ DÒNG NÀY) --- */}
+        {/* Route Admin */}
         <Route
           path="/admin"
           element={
@@ -44,19 +33,29 @@ function MyApp() {
             </AdminRoute>
           }
         />
-        {/* --------------------------------------- */}
 
-        {/* Các route protected - kết hợp layout và xác thực */}
+        {/* Route User */}
         <Route element={<PrivateRoutes />}>
           <Route element={<MainLayout />}>
             <Route path="/farms" element={<FarmListPage />} />
-            <Route path="/farms/:farmId" element={<FarmDetailPage />} />
-            <Route path="/" element={<Navigate to="/farms" />} />
+
+
+            {/* Route Dashboard (chung cho nông trại đang được chọn) */}
+            {/* LƯU Ý: Không còn :farmId nữa */}
+            <Route path="/dashboard" element={<FarmDashboard />} />
+
+
+            <Route path="/weather" element={<WeatherPage />} />
+
+
+            {/* KHI CHỌN NÔNG TRẠI -> VÀO DASHBOARD */}
+            <Route path="/farms/:farmId/dashboard" element={<FarmDashboard />} />
+
+            {/* Redirect cũ để tránh lỗi */}
+            <Route path="/farms/:farmId" element={<Navigate to="/farms/:farmId/dashboard" replace />} />
           </Route>
         </Route>
 
-
-        {/* Fallback route */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
