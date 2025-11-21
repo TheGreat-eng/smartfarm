@@ -1,7 +1,7 @@
 // smart-farm-frontend/src/components/MainLayout.tsx
 
 import React, { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     Layout,
     Menu,
@@ -18,6 +18,7 @@ import {
     UserOutlined,
 } from '@ant-design/icons';
 import { Sun, Wind } from 'lucide-react';
+import { useFarmContext } from '../context/FarmContext'; // Import context
 
 const { Header, Content, Sider } = Layout;
 
@@ -28,6 +29,8 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [collapsed, setCollapsed] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation(); // Để highlight menu đang active
+    const { selectedFarm } = useFarmContext(); // Lấy thông tin nông trại đang chọn
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
@@ -53,6 +56,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     return (
         <Layout style={{ minHeight: '100vh' }}>
             <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
+
                 <div style={{
                     height: '32px',
                     margin: '16px',
@@ -66,16 +70,44 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 }}>
                     {collapsed ? 'SF' : 'SmartFarm'}
                 </div>
-                <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
-                    <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => navigate('/farms')}>
-                        Nông trại của tôi
+
+                {selectedFarm && (
+                    <div style={{ padding: '0 16px 16px', color: 'white', textAlign: 'center', borderBottom: '1px solid #ffffff30', marginBottom: 10 }}>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>Đang quản lý:</div>
+                        <div style={{ fontWeight: 'bold', color: '#52c41a', fontSize: 16 }}>{selectedFarm.name}</div>
+                    </div>
+                )}
+
+                <Menu
+                    theme="dark"
+                    mode="inline"
+                    selectedKeys={[location.pathname]} // Tự động highlight theo URL
+                >
+                    <Menu.Item key="/farms" icon={<HomeOutlined />} onClick={() => navigate('/farms')}>
+                        Đổi Nông Trại
                     </Menu.Item>
-                    <Menu.Item key="2" icon={<DashboardOutlined />} disabled>
+
+                    {/* Chỉ cho bấm vào Dashboard nếu đã chọn nông trại */}
+                    <Menu.Item
+                        key="/dashboard"
+                        icon={<DashboardOutlined />}
+                        onClick={() => navigate('/dashboard')}
+                        disabled={!selectedFarm} // Nếu chưa chọn thì disable
+                    >
                         Dashboard Tổng
                     </Menu.Item>
-                    <Menu.Item key="3" icon={<Sun />} disabled>
+
+                    {/* --- ĐÃ SỬA: THÊM SỰ KIỆN ONCLICK --- */}
+                    <Menu.Item
+                        key="/weather"
+                        icon={<Sun />}
+                        onClick={() => navigate('/weather')} // <-- Thêm dòng này để chuyển trang
+                        disabled={!selectedFarm}
+                    >
                         Thời tiết
                     </Menu.Item>
+                    {/* ------------------------------------ */}
+
                     <Menu.Item key="4" icon={<Wind />} disabled>
                         AI Dự đoán
                     </Menu.Item>
