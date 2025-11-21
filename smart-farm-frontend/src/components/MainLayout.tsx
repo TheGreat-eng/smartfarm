@@ -31,7 +31,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
-        navigate('/login');
+        localStorage.removeItem('userRole');
+        navigate('/');
     };
 
     const menuItems: MenuProps['items'] = [

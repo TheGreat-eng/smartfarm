@@ -100,7 +100,7 @@ const AdminDashboard: React.FC = () => {
     const handleLogout = () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userRole');
-        navigate('/login');
+        navigate('/');
     };
 
     // Cột bảng User

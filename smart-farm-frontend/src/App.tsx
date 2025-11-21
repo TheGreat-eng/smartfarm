@@ -7,6 +7,11 @@ import MainLayout from './components/MainLayout';
 import AdminRoute from './components/AdminRoute';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 
+
+
+import LandingPage from './pages/LandingPage/LandingPage';
+
+
 // PrivateRoutes component chỉ xác thực, không chứa layout
 const PrivateRoutes = () => {
   const isAuthenticated = !!localStorage.getItem('authToken');
@@ -17,6 +22,14 @@ function MyApp() {
   return (
     <BrowserRouter>
       <Routes>
+
+
+
+
+        {/* --- Route Mặc Định Trỏ Về Landing Page --- */}
+        <Route path="/" element={<LandingPage />} />
+        {/* ------------------------------------------ */}
+
         {/* Các route không cần layout */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

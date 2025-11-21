@@ -55,8 +55,12 @@ public class SecurityConfig {
                         // ================== SỬA ĐỔI TẠI ĐÂY ==================
                         // Gộp tất cả các quy tắc cho /api/farms/** thành một dòng duy nhất
                         // Điều này sẽ áp dụng cho cả endpoint /latest và /history
-                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
- 
+                        //.requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+
+
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN") 
+
+
                         .requestMatchers("/api/farms/**").authenticated()
                         
                         // ================== KẾT THÚC SỬA ĐỔI ==================

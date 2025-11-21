@@ -58,7 +58,7 @@ const FarmListPage: React.FC = () => {
         localStorage.removeItem('userRole'); // Xóa cả role khi logout
         delete apiClient.defaults.headers.common['Authorization'];
         message.success('Đã đăng xuất!');
-        navigate('/login');
+        navigate('/');
     };
 
     const handleFarmClick = (farmId: number) => {
