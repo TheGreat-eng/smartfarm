@@ -13,8 +13,8 @@ import {
 import apiClient from '../../services/api';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import SensorChart from '../FarmList/SensorChart' // Đảm bảo đường dẫn import đúng file Chart cũ
-import { useFarmContext } from '../../context/FarmContext'; // IMPORT CONTEXT
+import SensorChart from '../FarmList/SensorChart';
+import { useFarmContext } from '../../context/FarmContext';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -37,24 +37,16 @@ function parseJwt(token: string) {
 }
 
 const FarmDashboard: React.FC = () => {
-    // 1. Lấy nông trại từ Context thay vì URL
     const { selectedFarm } = useFarmContext();
     const navigate = useNavigate();
     const { modal } = App.useApp();
-
-    // 2. Kiểm tra nếu chưa chọn nông trại thì đá về trang danh sách
-    useEffect(() => {
-        if (!selectedFarm) {
-            message.warning('Vui lòng chọn nông trại cần xem!');
-            navigate('/farms');
-        }
-    }, [selectedFarm, navigate]);
 
     // Data States
     const [sensorData, setSensorData] = useState<SensorData>({});
     const [devices, setDevices] = useState<Device[]>([]);
     const [rules, setRules] = useState<Rule[]>([]);
     const [historyData, setHistoryData] = useState<HistoryDataState>({ temperature: [], humidity: [], soil_moisture: [], light: [] });
+
     const [loading, setLoading] = useState({ sensors: true, devices: true, rules: true, history: true });
 
     // Modal States
@@ -67,17 +59,13 @@ const FarmDashboard: React.FC = () => {
     const [deviceForm] = Form.useForm();
     const [ruleForm] = Form.useForm();
 
-    // Nếu selectedFarm chưa có (đang redirect) thì return null để tránh lỗi crash
-    if (!selectedFarm) return null;
-
-    // Lấy ID để dùng cho các hàm bên dưới
-    const farmId = selectedFarm.id;
+    const farmId = selectedFarm?.id;
 
     // --- CÁC HÀM FETCH DỮ LIỆU ---
 
-    // Lấy dữ liệu lịch sử
+    // 1. Lấy dữ liệu lịch sử
     const fetchHistoryData = useCallback(async () => {
-        setLoading(prev => ({ ...prev, history: true }));
+        if (!farmId) return;
         try {
             const metrics: (keyof HistoryDataState)[] = ['temperature', 'humidity', 'soil_moisture', 'light'];
             const promises = metrics.map(metric => apiClient.get<HistoryDataPoint[]>(`/farms/${farmId}/sensordata/history`, { params: { metricType: metric, range: '24h' } }));
@@ -90,19 +78,23 @@ const FarmDashboard: React.FC = () => {
         }
     }, [farmId]);
 
-    // Lấy dữ liệu tổng hợp
+    // 2. Lấy dữ liệu tổng hợp (Đã xóa phần gọi API Health)
     const fetchData = useCallback(async () => {
-        setLoading(prev => ({ ...prev, sensors: true, devices: true, rules: true }));
+        if (!farmId) return;
+
+        // Promise.all để gọi song song các API
         const promises = [
             apiClient.get<SensorDataResponse[]>(`/farms/${farmId}/sensordata/latest`),
             apiClient.get<Device[]>(`/farms/${farmId}/devices`),
             apiClient.get<Rule[]>(`/farms/${farmId}/rules`),
             fetchHistoryData()
         ];
+
         try {
+            // Destructuring kết quả (chỉ lấy 3 cái đầu, cái cuối là history hàm void)
             const [sensorResponse, deviceResponse, ruleResponse] = await Promise.all(promises.slice(0, 3));
 
-            // Format Sensor Data
+            // Xử lý Sensor Data
             const formattedData: SensorData = sensorResponse.data.reduce((acc, item) => {
                 const key = item.metricType.toLowerCase();
                 if (['temperature', 'humidity', 'soil_moisture', 'light'].includes(key)) {
@@ -112,28 +104,32 @@ const FarmDashboard: React.FC = () => {
             }, {} as SensorData);
 
             setSensorData(formattedData);
-            setLoading(prev => ({ ...prev, sensors: false }));
-
             setDevices(deviceResponse.data);
-            setLoading(prev => ({ ...prev, devices: false }));
-
             setRules(ruleResponse.data);
-            setLoading(prev => ({ ...prev, rules: false }));
 
         } catch (error) {
-            message.error('Không thể tải dữ liệu nông trại!');
+            console.error('Lỗi khi tải dữ liệu nông trại:', error);
+        } finally {
             setLoading({ sensors: false, devices: false, rules: false, history: false });
         }
     }, [farmId, fetchHistoryData]);
 
-    // Effect khởi chạy
+    // --- EFFECTS ---
+
+    // Effect 1: Kiểm tra Farm & Initial Load
     useEffect(() => {
+        if (!selectedFarm) {
+            message.warning('Vui lòng chọn nông trại cần xem!');
+            navigate('/farms');
+            return;
+        }
+
         fetchData();
         const intervalId = setInterval(fetchData, 60000); // Refresh mỗi 60s
         return () => clearInterval(intervalId);
-    }, [fetchData]); // Khi farmId thay đổi (do chọn farm khác), useEffect này chạy lại
+    }, [selectedFarm, navigate, fetchData]);
 
-    // WebSocket Notification
+    // Effect 2: WebSocket Notification
     useEffect(() => {
         const token = localStorage.getItem('authToken');
         if (!token) return;
@@ -189,13 +185,14 @@ const FarmDashboard: React.FC = () => {
         }
     };
 
+    if (!selectedFarm) return null;
+
     const sensorDevices = devices.filter(d => d.type.toUpperCase().includes('SENSOR'));
     const actuatorDevices = devices.filter(d => !d.type.toUpperCase().includes('SENSOR'));
 
     // --- Render ---
     return (
         <Spin spinning={loading.sensors} tip="Đang tải dữ liệu...">
-            {/* Breadcrumb - Dùng tên nông trại từ Context */}
             <Breadcrumb style={{ marginBottom: 16 }}>
                 <Breadcrumb.Item href="/farms">
                     <HomeOutlined /> Danh sách
@@ -214,7 +211,11 @@ const FarmDashboard: React.FC = () => {
                 style={{ padding: 0, marginBottom: 24 }}
             />
 
-            {/* Row 1: Thống kê */}
+            {/* Đã xóa phần hiển thị Sức khỏe cây trồng ở đây */}
+
+            <Divider orientation="left">Giám sát môi trường</Divider>
+
+            {/* Row 1: Thống kê Cảm biến */}
             <Row gutter={[24, 24]}>
                 <Col xs={24} sm={12} lg={6}>
                     <Card hoverable style={{ borderColor: '#ffccc7' }}>

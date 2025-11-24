@@ -19,6 +19,7 @@ import {
 } from '@ant-design/icons';
 import { Sun, Wind } from 'lucide-react';
 import { useFarmContext } from '../context/FarmContext'; // Import context
+import { HeartPulse } from 'lucide-react'; // Import HeartPulse
 
 const { Header, Content, Sider } = Layout;
 
@@ -96,6 +97,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     >
                         Dashboard Tổng
                     </Menu.Item>
+
+                    {/* --- THÊM MỤC NÀY --- */}
+                    <Menu.Item
+                        key="/health"
+                        icon={<HeartPulse size={16} />} // Icon trái tim
+                        onClick={() => navigate('/health')}
+                        disabled={!selectedFarm} // Khóa nếu chưa chọn farm
+                        style={{ display: 'flex', alignItems: 'center' }} // Căn chỉnh icon
+                    >
+                        Sức Khỏe Cây Trồng
+                    </Menu.Item>
+                    {/* ------------------- */}
 
                     {/* --- ĐÃ SỬA: THÊM SỰ KIỆN ONCLICK --- */}
                     <Menu.Item

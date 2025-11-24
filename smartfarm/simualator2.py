@@ -217,12 +217,12 @@ def main():
     INTERVAL    = int(os.getenv("SIM_INTERVAL", "10"))
 
     devices = [
-        {"id": "DHT22-1", "type": "DHT22"},
-        {"id": "DHT22-2", "type": "DHT22"},
-        {"id": "SOIL-1",  "type": "SOIL_MOISTURE"},
-        {"id": "SOIL-2",  "type": "SOIL_MOISTURE"},
-        {"id": "LIGHT-1", "type": "LIGHT"},
-        {"id": "PH-1",    "type": "PH"},
+        {"id": "DHT22-1018", "type": "DHT22"},
+        {"id": "DHT22-2018", "type": "DHT22"},
+        {"id": "SOIL-1018",  "type": "SOIL_MOISTURE"},
+        {"id": "SOIL-2018",  "type": "SOIL_MOISTURE"},
+        {"id": "LIGHT-1018", "type": "LIGHT"},
+        {"id": "PH-1018",    "type": "PH"},
     ]
 
     sim = SensorSimulator(BROKER_HOST, BROKER_PORT, username=MQTT_USER, password=MQTT_PASS)
