@@ -5,20 +5,16 @@ import org.springframework.integration.mqtt.support.MqttHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
-/**
- * Defines a gateway for sending MQTT messages.
- * This is the recommended way to send messages to an integration flow.
- */
+
 @Component
 @MessagingGateway(defaultRequestChannel = "mqttOutboundChannel")
+//Ý nghĩa là "Bất cứ cái gì được đưa vào hàm này, hãy ném nó vào đường ống có tên mqttOutboundChannel".
 public interface MqttGateway {
+//  MqttGateway  Cái nút bấm để gửi tin nhắn MQTT
 
-    /**
-     * Sends a message to the specified MQTT topic.
-     * 
-     * @param data  The payload of the message.
-     * @param topic The MQTT topic to publish to.
-     */
+
+
     void sendToMqtt(String data, @Header(MqttHeaders.TOPIC) String topic);
+    // @Header(MqttHeaders.TOPIC): Tham số thứ 2 của hàm sẽ được biến thành "Tiêu đề Topic" của gói tin MQTT.
 
 }
