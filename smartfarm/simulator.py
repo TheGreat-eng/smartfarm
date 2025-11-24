@@ -13,14 +13,14 @@ MQTT_BROKER = "localhost" # Đảm bảo broker đang chạy trên localhost
 MQTT_PORT = 1883
 PUBLISH_INTERVAL_SECONDS = 10
 
-FARM_ID = 1
+FARM_ID = 6
 
 # Danh sách các thiết bị cảm biến mà script này sẽ giả lập
 DEVICES = [
-    {"identifier": "sensor-dht22-01", "type": "SENSOR_TEMPERATURE", "value": 28.0},
-    {"identifier": "sensor-dht22-02", "type": "SENSOR_HUMIDITY", "value": 75.0},
-    {"identifier": "sensor-soil-01", "type": "SENSOR_SOIL_MOISTURE", "value": 60.0},
-    {"identifier": "sensor-light-01", "type": "SENSOR_LIGHT", "value": 30000.0}
+    {"identifier": "DHT22-1018", "type": "SENSOR_TEMPERATURE", "value": 28.0},
+    {"identifier": "DHT22-2018", "type": "SENSOR_HUMIDITY", "value": 75.0},
+    {"identifier": "SOIL-1018", "type": "SENSOR_SOIL_MOISTURE", "value": 60.0},
+    {"identifier": "LIGHT-1018", "type": "SENSOR_LIGHT", "value": 30000.0}
 ]
 
 # --- SIMULATION LOGIC  ---
@@ -32,7 +32,7 @@ def simulate_sensor_value(device):
     hour = datetime.now().hour
 
     if device['type'] == 'SENSOR_TEMPERATURE':
-        base_temp = 24
+        base_temp = 35
         amplitude = 8
         daily_variation = amplitude * math.sin((hour - 7) * math.pi / 14) if 7 <= hour <= 21 else -amplitude/2
         new_value = base_temp + daily_variation + noise

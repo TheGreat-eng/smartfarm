@@ -9,6 +9,7 @@ import AdminRoute from './components/AdminRoute';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import LandingPage from './pages/LandingPage/LandingPage';
 import WeatherPage from './pages/Weather/WeatherPage'; // Nhớ import
+import CropHealthPage from './pages/CropHealth/CropHealthPage';
 
 
 const PrivateRoutes = () => {
@@ -39,7 +40,8 @@ function MyApp() {
           <Route element={<MainLayout />}>
             <Route path="/farms" element={<FarmListPage />} />
 
-
+            {/* 2. THÊM ROUTE NÀY VÀO TRONG MainLayout */}
+            <Route path="/health" element={<CropHealthPage />} />
             {/* Route Dashboard (chung cho nông trại đang được chọn) */}
             {/* LƯU Ý: Không còn :farmId nữa */}
             <Route path="/dashboard" element={<FarmDashboard />} />
