@@ -62,9 +62,9 @@ public class AuthService {
         // Lấy Role từ UserDetails
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         String role = userDetails.getAuthorities().stream()
-                .findFirst().map(item -> item.getAuthority()).orElse("ROLE_USER");
+        .findFirst().map(item -> item.getAuthority()).orElse("ROLE_USER");
 
         // Trả về object chứa cả Token và Role
-        return new AuthResponse(jwt, role);
+        return new AuthResponse(jwt, role, userDetails.getId());
     }
 }
