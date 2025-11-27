@@ -1,56 +1,44 @@
 package com.example.smartfarm.controller;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.smartfarm.dto.NotificationDTO;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.util.HtmlUtils;
+import com.example.smartfarm.security.services.UserDetailsImpl;
+import com.example.smartfarm.service.NotificationService;
 
-import java.time.Instant;
-
-@Controller
+@RestController // Đổi từ @Controller sang @RestController để dùng API
+@RequestMapping("/api/notifications")
 public class NotificationController {
 
-    /**
-     * Phương thức này xử lý các tin nhắn gửi đến destination '/app/hello'.
-     * Nó chỉ là một ví dụ để kiểm tra kết nối hai chiều.
-     * Client gửi tin nhắn đến '/app/hello', server nhận, xử lý và gửi lại
-     * một tin nhắn chào mừng đến topic '/topic/greetings'.
-     *
-     * @param message Đối tượng chứa tin nhắn từ client (ví dụ: {"name": "toan"})
-     * @return Một đối tượng NotificationDTO sẽ được gửi đến tất cả các client
-     *         đang subscribe vào '/topic/greetings'.
-     * @throws InterruptedException
-     */
-    @MessageMapping("/hello")
-    @SendTo("/topic/greetings")
-    public NotificationDTO greeting(HelloMessage message) throws InterruptedException {
-        // Mô phỏng một chút độ trễ
-        Thread.sleep(1000);
-        String responseMessage = "Hello, " + HtmlUtils.htmlEscape(message.getName()) + "!";
-        return new NotificationDTO(responseMessage, Instant.now());
+    @Autowired
+    private NotificationService notificationService;
+
+    // Lấy tất cả thông báo
+    @GetMapping
+    public ResponseEntity<List<NotificationDTO>> getNotifications(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(notificationService.getUserNotifications(userDetails.getId()));
     }
 
-    /**
-     * Một lớp nội tại (inner class) đơn giản để đại diện cho tin nhắn
-     * được gửi từ client.
-     */
-    public static class HelloMessage {
-        private String name;
+    // Đánh dấu 1 tin đã đọc
+    @PutMapping("/{id}/read")
+    public ResponseEntity<?> markAsRead(@PathVariable Long id) {
+        notificationService.markAsRead(id);
+        return ResponseEntity.ok().build();
+    }
 
-        public HelloMessage() {
-        }
-
-        public HelloMessage(String name) {
-            this.name = name;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
+    // Đánh dấu tất cả đã đọc
+    @PutMapping("/read-all")
+    public ResponseEntity<?> markAllAsRead(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        notificationService.markAllAsRead(userDetails.getId());
+        return ResponseEntity.ok().build();
     }
 }

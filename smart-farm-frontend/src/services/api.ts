@@ -32,4 +32,13 @@ apiClient.interceptors.response.use(
     }
 );
 
+
+const notificationApi = {
+    getAll: () => apiClient.get('/notifications'),
+    markRead: (id: number) => apiClient.put(`/notifications/${id}/read`),
+    markAllRead: () => apiClient.put('/notifications/read-all'),
+};
+
+export { notificationApi }; // Nhớ export ra
+
 export default apiClient;
