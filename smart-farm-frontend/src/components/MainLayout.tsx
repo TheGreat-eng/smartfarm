@@ -21,6 +21,10 @@ import { Sun, Wind } from 'lucide-react';
 import { useFarmContext } from '../context/FarmContext'; // Import context
 import { HeartPulse } from 'lucide-react'; // Import HeartPulse
 
+
+import NotificationBell from './NotificationBell'; // Import Component mới
+
+
 const { Header, Content, Sider } = Layout;
 
 interface MainLayoutProps {
@@ -135,6 +139,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     alignItems: 'center',
                     borderBottom: '1px solid #f0f0f0'
                 }}>
+
+
+
+
+                    {/* --- THÊM PHẦN NÀY --- */}
+                    <div style={{ marginRight: 24 }}>
+                        <NotificationBell />
+                    </div>
+                    {/* ------------------- */}
+
+
+
+
                     <Dropdown menu={{ items: menuItems }} placement="bottomRight">
                         <Button type="text" style={{ height: 'auto', padding: 0 }}>
                             <Space>
