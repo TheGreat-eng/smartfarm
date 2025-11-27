@@ -132,10 +132,9 @@ const FarmDashboard: React.FC = () => {
     // Effect 2: WebSocket Notification
     useEffect(() => {
         const token = localStorage.getItem('authToken');
-        if (!token) return;
+        const userId = localStorage.getItem('userId'); // <--- SỬA DÒNG NÀY
 
-        const decodedToken = parseJwt(token);
-        const userId = decodedToken?.userId || decodedToken?.sub;
+        if (!token || !userId) return; // Kiểm tra userId tồn tại
 
         if (!userId) return;
 

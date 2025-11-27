@@ -101,4 +101,7 @@ public class CropHealthService {
 
         return new HealthCheckResponse(score, status, issues, profile.getName());
     }
+
 }
+
+

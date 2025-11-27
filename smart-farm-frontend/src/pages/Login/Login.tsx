@@ -19,12 +19,12 @@ const LoginPage: React.FC = () => {
 
             // Backend trả về: { accessToken: "...", role: "ROLE_USER" }
             // Destructuring để lấy token và role
-            const { accessToken, role } = response.data;
+            const { accessToken, role, id } = response.data; // Lấy thêm id
 
             // Lưu token và role vào localStorage
             localStorage.setItem('authToken', accessToken);
             localStorage.setItem('userRole', role);
-
+            localStorage.setItem('userId', id); // Lưu id người dùng
             // Cấu hình header cho các request tiếp theo
             apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
 
