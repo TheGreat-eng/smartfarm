@@ -1,147 +1,110 @@
-import React, { useEffect, useState } from 'react';
-import { Badge, Button, Popover, List, Typography, Empty, Avatar } from 'antd';
-import { BellOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
-import { notificationApi } from '../services/api';
+// src/components/NotificationBell.tsx
+import React, { useState } from 'react';
+import { Badge, Button, Dropdown, List, Spin, Empty, Tooltip, Avatar } from 'antd';
+import { Bell, CheckCheck } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getNotifications, getUnreadCount, markAllNotificationsAsRead } from '../api/notificationService';
 import { useNavigate } from 'react-router-dom';
-
-const { Text } = Typography;
-
-interface NotificationItem {
-    id: number;
-    message: string;
-    timestamp: string;
-    read: boolean; // Lưu ý: backend trả về isRead hoặc read tùy JSON mapping
-    type: string;
-}
+import { timeAgo } from '../utils/time'; // Chúng ta sẽ tạo hàm này
+import { BellOutlined, ThunderboltOutlined } from '@ant-design/icons';
 
 const NotificationBell: React.FC = () => {
-    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [open, setOpen] = useState(false);
-    const userId = localStorage.getItem('userId');
+    const [isOpen, setIsOpen] = useState(false);
+    const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
-    // 1. Load thông báo từ DB khi trang web tải
-    const fetchNotifications = async () => {
-        try {
-            const res = await notificationApi.getAll();
-            setNotifications(res.data);
-            setUnreadCount(res.data.filter((n: any) => !n.read).length);
-        } catch (error) {
-            console.error("Lỗi tải thông báo", error);
+    // 1. Fetch số lượng thông báo chưa đọc
+    const { data: unreadData, isLoading: isLoadingCount } = useQuery({
+        queryKey: ['notifications', 'unreadCount'],
+        queryFn: getUnreadCount,
+        refetchInterval: 60 * 1000, // Tự động fetch lại mỗi phút
+    });
+    const unreadCount = unreadData?.count || 0;
+
+    // 2. Fetch danh sách thông báo mới nhất khi dropdown mở
+    const { data: notificationsPage, isLoading: isLoadingList } = useQuery({
+        queryKey: ['notifications', 'latest'],
+        queryFn: () => getNotifications({ page: 0, size: 7 }),
+        enabled: isOpen, // Chỉ fetch khi dropdown được mở
+    });
+
+    // 3. Mutation để đánh dấu tất cả đã đọc
+    const markAllReadMutation = useMutation({
+        mutationFn: markAllNotificationsAsRead,
+        onSuccess: () => {
+            // Làm mới lại cả count và list
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        },
+    });
+
+    const handleNotificationClick = (link: string | null) => {
+        setIsOpen(false);
+        if (link) {
+            navigate(link);
         }
     };
 
-    useEffect(() => {
-        if (!userId) return;
-        fetchNotifications();
-
-        // 2. Kết nối WebSocket để nhận thông báo mới realtime
-        const token = localStorage.getItem('authToken');
-        const client = new Client({
-            webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
-            connectHeaders: { Authorization: `Bearer ${token}` },
-            onConnect: () => {
-                client.subscribe(`/topic/notifications/${userId}`, (msg) => {
-                    if (msg.body) {
-                        const newNotif = JSON.parse(msg.body);
-                        // Cập nhật list và tăng số lượng chưa đọc
-                        setNotifications(prev => [newNotif, ...prev]);
-                        setUnreadCount(prev => prev + 1);
-                    }
-                });
-            },
-        });
-
-        client.activate();
-        return () => { if (client.active) client.deactivate(); };
-    }, [userId]);
-
-    // 3. Xử lý đánh dấu đã đọc
-    const handleRead = async (item: NotificationItem) => {
-        if (!item.read) {
-            try {
-                await notificationApi.markRead(item.id);
-                // Cập nhật state local
-                const newEvents = notifications.map(n =>
-                    n.id === item.id ? { ...n, read: true } : n
-                );
-                setNotifications(newEvents);
-                setUnreadCount(prev => Math.max(0, prev - 1));
-            } catch (e) { console.error(e); }
+    // Icon cho từng loại thông báo
+    const getNotificationIcon = (type: string) => {
+        switch (type) {
+            case 'PLANT_HEALTH_ALERT': return <Avatar style={{ backgroundColor: '#f5222d' }} icon={<BellOutlined />} />;
+            case 'RULE_TRIGGERED': return <Avatar style={{ backgroundColor: '#faad14' }} icon={<ThunderboltOutlined />} />;
+            case 'DEVICE_STATUS': return <Avatar style={{ backgroundColor: '#8c8c8c' }} icon={<BellOutlined />} />;
+            default: return <Avatar icon={<BellOutlined />} />;
         }
-    };
+    }
 
-    const handleMarkAllRead = async () => {
-        try {
-            await notificationApi.markAllRead();
-            setNotifications(notifications.map(n => ({ ...n, read: true })));
-            setUnreadCount(0);
-        } catch (e) { console.error(e); }
-    };
-
-    // Nội dung popup danh sách thông báo
-    const content = (
-        <div style={{ width: 350, maxHeight: 400, overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 8px 8px', borderBottom: '1px solid #f0f0f0' }}>
-                <Text strong>Thông báo</Text>
-                <Button type="link" size="small" onClick={handleMarkAllRead} disabled={unreadCount === 0}>
-                    Đánh dấu tất cả đã đọc
-                </Button>
-            </div>
-            <List
-                dataSource={notifications}
-                locale={{ emptyText: <Empty description="Không có thông báo nào" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-                renderItem={(item) => (
-                    <List.Item
-                        onClick={() => handleRead(item)}
-                        style={{
-                            cursor: 'pointer',
-                            background: item.read ? '#fff' : '#e6f7ff', // Màu xanh nhạt nếu chưa đọc
-                            padding: '12px',
-                            transition: 'all 0.3s'
-                        }}
-                        className="notification-item"
-                    >
-                        <List.Item.Meta
-                            avatar={<Avatar style={{ backgroundColor: item.read ? '#ccc' : '#1890ff' }} icon={<BellOutlined />} />}
-                            title={
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <Text delete={false} style={{ fontWeight: item.read ? 'normal' : 'bold', fontSize: 13 }}>
-                                        {item.type === 'ALERT' ? 'Cảnh báo' : 'Hệ thống'}
-                                    </Text>
-                                    <Text type="secondary" style={{ fontSize: 11 }}>
-                                        {new Date(item.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                    </Text>
-                                </div>
-                            }
-                            description={<Text style={{ color: item.read ? '#888' : '#333' }}>{item.message}</Text>}
-                        />
-                        {!item.read && <CheckCircleOutlined style={{ color: '#1890ff', fontSize: 12 }} />}
-                    </List.Item>
+    const notificationMenu = (
+        <div style={{ width: 380, backgroundColor: 'var(--card-light)', boxShadow: '0 6px 16px -8px rgba(0, 0, 0, 0.08), 0 9px 28px 0 rgba(0, 0, 0, 0.05), 0 12px 48px 16px rgba(0, 0, 0, 0.03)', borderRadius: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>
+                <h4 style={{ margin: 0 }}>Thông báo</h4>
+                {unreadCount > 0 && (
+                    <Tooltip title="Đánh dấu tất cả đã đọc">
+                        <Button type="text" shape="circle" icon={<CheckCheck size={16} />} onClick={() => markAllReadMutation.mutate()} />
+                    </Tooltip>
                 )}
-            />
+            </div>
+            {isLoadingList ? (
+                <div style={{ padding: 40, textAlign: 'center' }}><Spin /></div>
+            ) : (!notificationsPage || notificationsPage.content.length === 0) ? (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có thông báo nào" style={{ padding: '20px 0' }} />
+            ) : (
+                <List
+                    itemLayout="horizontal"
+                    dataSource={notificationsPage.content}
+                    renderItem={item => (
+                        <List.Item
+                            onClick={() => handleNotificationClick(item.link)}
+                            style={{ padding: '12px 16px', cursor: 'pointer', backgroundColor: item.isRead ? 'transparent' : 'var(--accent-light)' }}
+                        >
+                            <List.Item.Meta
+                                avatar={getNotificationIcon(item.type)}
+                                title={<span style={{ fontWeight: item.isRead ? 400 : 600 }}>{item.title}</span>}
+                                description={
+                                    <>
+                                        <div>{item.message}</div>
+                                        <div style={{ fontSize: 12, color: 'var(--muted-foreground-light)', marginTop: 4 }}>{timeAgo(item.createdAt)}</div>
+                                    </>
+                                }
+                            />
+                        </List.Item>
+                    )}
+                />
+            )}
+            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-light)', textAlign: 'center' }}>
+                <a onClick={() => navigate('/notifications')}>Xem tất cả</a>
+            </div>
         </div>
     );
 
     return (
-        <Popover
-            content={content}
-            title={null}
-            trigger="click"
-            open={open}
-            onOpenChange={setOpen}
-            placement="bottomRight"
-        >
-            <Badge count={unreadCount} overflowCount={99}>
-                <Button
-                    type="text"
-                    icon={<BellOutlined style={{ fontSize: '20px' }} />}
-                    style={{ height: 'auto', padding: 8 }}
-                />
-            </Badge>
-        </Popover>
+        <Dropdown dropdownRender={() => notificationMenu} trigger={['click']} onOpenChange={setIsOpen}>
+            <Tooltip title="Thông báo">
+                <Badge count={isLoadingCount ? 0 : unreadCount} size="small">
+                    <Button type="text" shape="circle" icon={<Bell size={18} />} />
+                </Badge>
+            </Tooltip>
+        </Dropdown>
     );
 };
 
