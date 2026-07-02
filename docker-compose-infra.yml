@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # 1. Database MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: smartfarm-mysql-infra
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: smartfarm
+    ports:
+      - "3307:3306" # Maps container 3306 to host 3307
+    volumes:
+      - mysql_infra_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 2. Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: smartfarm-redis-infra
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_infra_data:/data
+
+  # 3. InfluxDB (Lưu trữ dữ liệu chuỗi thời gian cho cảm biến)
+  influxdb:
+    image: influxdb:2.7
+    container_name: smartfarm-influxdb-infra
+    restart: always
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=my-super-secret-password
+      - DOCKER_INFLUXDB_INIT_ORG=smart-farm
+      - DOCKER_INFLUXDB_INIT_BUCKET=sensor-data
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-token
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_infra_data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 4. MQTT Broker (Mosquitto)
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: smartfarm-mqtt-infra
+    restart: always
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_infra_data:/mosquitto/data
+      - mosquitto_infra_log:/mosquitto/log
+
+  # 5. Nginx Web Server để phục vụ Frontend đã build tĩnh
+  frontend:
+    image: nginx:1.25-alpine
+    container_name: smartfarm-frontend-nginx
+    restart: always
+    ports:
+      - "3000:80" # Truy cập ứng dụng tại http://localhost:3000
+    volumes:
+      - ./smart-farm-frontend/dist:/usr/share/nginx/html:ro # Mount thư mục build tĩnh
+      - ./smart-farm-frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro # Sử dụng cấu hình Nginx của dự án
+    extra_hosts:
+      - "backend:host-gateway" # Map hostname "backend" trong nginx.conf về địa chỉ Host machine
+
+volumes:
+  mysql_infra_data:
+  redis_infra_data:
+  influxdb_infra_data:
+  mosquitto_infra_data:
+  mosquitto_infra_log:

@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # 1. Database MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: smartfarm-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: smartfarm
+    ports:
+      - "3307:3306" # Maps container 3306 to host 3307 (matching local app development config)
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 2. Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: smartfarm-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 3. InfluxDB (Lưu trữ dữ liệu chuỗi thời gian cho cảm biến)
+  influxdb:
+    image: influxdb:2.7
+    container_name: smartfarm-influxdb
+    restart: always
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=my-super-secret-password
+      - DOCKER_INFLUXDB_INIT_ORG=smart-farm
+      - DOCKER_INFLUXDB_INIT_BUCKET=sensor-data
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-token
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 4. MQTT Broker (Mosquitto)
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: smartfarm-mqtt
+    restart: always
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+
+  # 5. Java Backend (Spring Boot)
+  backend:
+    build:
+      context: ./smartfarm
+      dockerfile: Dockerfile
+    container_name: smartfarm-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/smartfarm?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&useUnicode=true&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=my-super-secret-token
+      - INFLUXDB_ORG=smart-farm
+      - INFLUXDB_BUCKET=sensor-data
+      - MQTT_BROKER_URL=tcp://mqtt:1883
+      - SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION=true
+    depends_on:
+      mysql:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mqtt:
+        condition: service_started
+
+  # 6. React Frontend (Vite + Nginx)
+  frontend:
+    build:
+      context: ./smart-farm-frontend
+      dockerfile: Dockerfile
+    container_name: smartfarm-frontend
+    restart: always
+    ports:
+      - "3000:80" # Truy cập giao diện ứng dụng qua http://localhost:3000
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  redis_data:
+  influxdb_data:
+  mosquitto_data:
+  mosquitto_log:
